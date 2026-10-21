@@ -41,6 +41,10 @@ const props =
     data: {
       type: Array,
       default: () => []
+    },
+    emptyMessage: {
+      type: String,
+      default: 'Data Time Series Tahunan tidak tersedia.'
     }
   })
 
@@ -73,30 +77,100 @@ function buildOption() {
       : []
 
 
-  const labels =
-    rows.map(
-      item =>
-        String(
-          item.tahun ?? ''
-        )
+  const labels = [
+    ...new Set(
+      rows.map(
+        item => String(item.tahun ?? '')
+      )
     )
+  ].sort(
+    (a, b) => Number(a) - Number(b)
+  )
 
+  const seriesNames = [
+    ...new Set(
+      rows.map(
+        item => String(item.seriesName || 'Nilai')
+      )
+    )
+  ]
 
-  const values =
-    rows.map(
-      item => {
-        const nilai =
-          Number(
-            item.nilai
-          )
+  const valuesBySeries = new Map()
 
-        return Number.isFinite(
-          nilai
-        )
-          ? nilai
-          : 0
+  rows.forEach(item => {
+    const name =
+      String(item.seriesName || 'Nilai')
+
+    if (!valuesBySeries.has(name)) {
+      valuesBySeries.set(name, new Map())
+    }
+
+    const value =
+      Number(item.nilai)
+
+    valuesBySeries.get(name).set(
+      String(item.tahun ?? ''),
+      Number.isFinite(value) ? value : null
+    )
+  })
+
+  const colors = [
+    '#2563eb',
+    '#7c3aed',
+    '#059669',
+    '#d97706',
+    '#e11d48',
+    '#0891b2',
+    '#4f46e5',
+    '#65a30d'
+  ]
+
+  const series =
+    seriesNames.map((name, index) => {
+      const color =
+        colors[index] ||
+        `hsl(${Math.round(((index - colors.length) * 137.508) % 360)}, 68%, ${index % 2 === 0 ? 42 : 48}%)`
+
+      const values =
+        valuesBySeries.get(name)
+
+      return {
+        name,
+        type: 'line',
+        data: labels.map(
+          label => values.has(label)
+            ? values.get(label)
+            : null
+        ),
+        smooth: 0.3,
+        symbol: 'circle',
+        symbolSize: 7,
+        showSymbol: true,
+        connectNulls: false,
+        lineStyle: {
+          width: 3,
+          color
+        },
+        itemStyle: {
+          color: '#ffffff',
+          borderColor: color,
+          borderWidth: 2
+        },
+        emphasis: {
+          focus: 'series',
+          itemStyle: {
+            color,
+            borderColor: '#ffffff',
+            borderWidth: 2,
+            shadowBlur: 8
+          }
+        },
+        areaStyle: {
+          opacity: seriesNames.length > 1 ? 0.04 : 0.18,
+          color
+        }
       }
-    )
+    })
 
 
   return {
@@ -114,13 +188,26 @@ function buildOption() {
     */
 
     grid: {
-      top: 30,
+      top: seriesNames.length > 1 ? 48 : 30,
       right: 24,
       bottom: 34,
       left: 65,
       containLabel: false
     },
 
+    legend: {
+      show: seriesNames.length > 1,
+      type: 'scroll',
+      top: 4,
+      left: 65,
+      right: 16,
+      itemWidth: 12,
+      itemHeight: 8,
+      textStyle: {
+        color: '#64748b',
+        fontSize: 10
+      }
+    },
 
     /*
     |--------------------------------------------------------------------------
@@ -161,12 +248,30 @@ function buildOption() {
       formatter(
         params
       ) {
-        const item =
-          params?.[0]
+        const items =
+          (Array.isArray(params) ? params : [params])
+            .filter(
+              item =>
+                item &&
+                item.value !== null &&
+                item.value !== undefined
+            )
 
-        if (!item) {
+        if (items.length === 0) {
           return ''
         }
+
+        const escapeHtml = value =>
+          String(value).replace(
+            /[&<>"']/g,
+            character => ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+            })[character]
+          )
 
         return `
           <div
@@ -191,31 +296,16 @@ function buildOption() {
                 font-weight: 700;
               "
             >
-              ${item.axisValue}
+              ${escapeHtml(items[0].axisValue)}
             </div>
-
-            <div
-              style="
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 18px;
-              "
-            >
-              <span
-                style="
-                  color: #cbd5e1;
-                "
-              >
-                Nilai
-              </span>
-
-              <strong>
-                ${formatNumber(
-                  item.value
-                )}
-              </strong>
-            </div>
+            ${items.map(item => `
+              <div style="display: flex; justify-content: space-between; gap: 18px; margin-top: 4px;">
+                <span style="color: #cbd5e1;">
+                  ${item.marker}${escapeHtml(item.seriesName)}
+                </span>
+                <strong>${formatNumber(item.value)}</strong>
+              </div>
+            `).join('')}
           </div>
         `
       }
@@ -305,91 +395,7 @@ function buildOption() {
     |--------------------------------------------------------------------------
     */
 
-    series: [
-      {
-        name:
-          'Nilai',
-
-        type:
-          'line',
-
-        data:
-          values,
-
-        smooth:
-          0.3,
-
-        symbol:
-          'circle',
-
-        symbolSize:
-          7,
-
-        showSymbol:
-          true,
-
-        lineStyle: {
-          width: 3,
-          color:
-            '#2563eb'
-        },
-
-        itemStyle: {
-          color:
-            '#ffffff',
-
-          borderColor:
-            '#2563eb',
-
-          borderWidth: 2
-        },
-
-        emphasis: {
-          focus:
-            'series',
-
-          itemStyle: {
-            color:
-              '#2563eb',
-
-            borderColor:
-              '#ffffff',
-
-            borderWidth: 2,
-
-            shadowBlur: 8,
-
-            shadowColor:
-              'rgba(37, 99, 235, 0.25)'
-          }
-        },
-
-        areaStyle: {
-          opacity: 1,
-
-          color:
-            new echarts.graphic.LinearGradient(
-              0,
-              0,
-              0,
-              1,
-              [
-                {
-                  offset: 0,
-                  color:
-                    'rgba(37, 99, 235, 0.18)'
-                },
-
-                {
-                  offset: 1,
-                  color:
-                    'rgba(37, 99, 235, 0.01)'
-                }
-              ]
-            )
-        }
-      }
-    ]
+    series
   }
 }
 
@@ -571,7 +577,7 @@ onBeforeUnmount(() => {
             text-slate-400
           "
         >
-          Data Time Series Tahunan tidak tersedia.
+          {{ emptyMessage }}
         </p>
       </div>
     </div>

@@ -39,6 +39,9 @@ import AnnualTimeSeriesChart
 import QuarterlyTimeSeriesChart
   from '../components/timeseries/QuarterlyTimeSeriesChart.vue'
 
+import TimeSeriesNeracaComparisonChart
+  from '../components/timeseries/TimeSeriesNeracaComparisonChart.vue'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +50,9 @@ import QuarterlyTimeSeriesChart
 */
 
 const loading =
+  ref(false)
+
+const hasAppliedFilters =
   ref(false)
 
 const error =
@@ -61,12 +67,19 @@ const tahunanData =
 const triwulananData =
   ref([])
 
+const tahunanKlasifikasiData =
+  ref([])
+
+const triwulananKlasifikasiData =
+  ref([])
+
 
 /*
 |--------------------------------------------------------------------------
 | MODE GRAFIK
 |--------------------------------------------------------------------------
 |
+| annual (default)
 | both
 | annual
 | quarterly
@@ -252,6 +265,19 @@ const annualRange =
     }
   )
 
+const annualPeriodCount =
+  computed(
+    () =>
+      new Set(
+        tahunanData.value.map(
+          item =>
+            Number(item.tahun)
+        ).filter(
+          Number.isFinite
+        )
+      ).size
+  )
+
 
 /*
 |--------------------------------------------------------------------------
@@ -367,6 +393,17 @@ const quarterlyRange =
     }
   )
 
+const quarterlyPeriodCount =
+  computed(
+    () =>
+      new Set(
+        triwulananData.value.map(
+          item =>
+            `${Number(item.tahun)}-Q${Number(item.triwulan)}`
+        )
+      ).size
+  )
+
 
 /*
 |--------------------------------------------------------------------------
@@ -393,7 +430,6 @@ async function loadTimeSeries(
 ) {
   const currentRequest =
     ++loadRequestId
-
 
   loading.value =
     true
@@ -512,18 +548,28 @@ async function loadTimeSeries(
     */
 
     tahunanData.value =
-      Array.isArray(
-        tahunanResponse?.data
-      )
+      Array.isArray(tahunanResponse?.data)
         ? tahunanResponse.data
         : []
 
 
     triwulananData.value =
-      Array.isArray(
-        triwulananResponse?.data
-      )
+      Array.isArray(triwulananResponse?.data)
         ? triwulananResponse.data
+        : []
+
+    tahunanKlasifikasiData.value =
+      Array.isArray(
+        tahunanResponse?.statistikKlasifikasi
+      )
+        ? tahunanResponse.statistikKlasifikasi
+        : []
+
+    triwulananKlasifikasiData.value =
+      Array.isArray(
+        triwulananResponse?.statistikKlasifikasi
+      )
+        ? triwulananResponse.statistikKlasifikasi
         : []
 
 
@@ -575,6 +621,12 @@ async function loadTimeSeries(
     triwulananData.value =
       []
 
+    tahunanKlasifikasiData.value =
+      []
+
+    triwulananKlasifikasiData.value =
+      []
+
 
   } finally {
     if (
@@ -597,7 +649,6 @@ async function loadTimeSeries(
 function handleFilterChange(
   filters = {}
 ) {
-
   console.log(
   '[TimeSeries] handleFilterChange:',
   filters
@@ -658,6 +709,23 @@ function handleFilterChange(
         : []
   }
 
+  const canLoadData =
+    activeFilters.value.neraca.length > 0 &&
+    activeFilters.value.klasifikasi.length > 0
+
+  hasAppliedFilters.value =
+    canLoadData
+
+  if (!canLoadData) {
+    loadRequestId += 1
+    loading.value = false
+    error.value = ''
+    tahunanData.value = []
+    triwulananData.value = []
+    tahunanKlasifikasiData.value = []
+    triwulananKlasifikasiData.value = []
+    return
+  }
 
   loadTimeSeries(
     activeFilters.value
@@ -800,6 +868,7 @@ function downloadTimeSeriesCsv() {
         'Tahun',
         'Triwulan',
         'Periode',
+        'Sektor',
         'Nilai'
       ]
     )
@@ -832,6 +901,9 @@ function downloadTimeSeriesCsv() {
                 item.tahun ??
                 ''
               ),
+
+              item.seriesName ??
+                '',
 
               item.nilai ??
                 ''
@@ -868,6 +940,9 @@ function downloadTimeSeriesCsv() {
                 : '',
 
               item.periode ??
+                '',
+
+              item.seriesName ??
                 '',
 
               item.nilai ??
@@ -1726,10 +1801,10 @@ await new Promise(
     ====================================================== -->
 
     <TimeSeriesKpi
+      v-if="hasAppliedFilters"
       :annual-data="tahunanData"
       :quarterly-data="triwulananData"
     />
-
 
     <!-- =====================================================
          CONTROL / EXPORT
@@ -2014,6 +2089,18 @@ await new Promise(
     ====================================================== -->
 
     <div
+      v-if="!hasAppliedFilters"
+      class="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 text-center text-sm text-slate-500"
+    >
+      {{
+        activeFilters.neraca.length === 0
+          ? 'Pilih Neraca terlebih dahulu, lalu pilih Klasifikasi untuk menampilkan data.'
+          : 'Pilih Klasifikasi untuk menampilkan data.'
+      }}
+    </div>
+
+    <template v-else>
+    <div
       v-if="error"
       class="
         rounded-xl
@@ -2220,7 +2307,7 @@ await new Promise(
                 text-blue-600
               "
             >
-              {{ tahunanData.length }}
+              {{ annualPeriodCount }}
               periode
             </span>
           </div>
@@ -2244,6 +2331,11 @@ await new Promise(
               `annual-${chartRenderKey}`
             "
             :data="tahunanData"
+            :empty-message="
+              activeFilters.institusi.length === 0
+                ? 'Pilih sektor pada filter Institusi untuk menampilkan grafik.'
+                : 'Data Time Series Tahunan tidak tersedia.'
+            "
           />
         </div>
       </section>
@@ -2352,7 +2444,7 @@ await new Promise(
                 text-violet-600
               "
             >
-              {{ triwulananData.length }}
+              {{ quarterlyPeriodCount }}
               periode
             </span>
           </div>
@@ -2376,9 +2468,24 @@ await new Promise(
               `quarterly-${chartRenderKey}`
             "
             :data="triwulananData"
+            :empty-message="
+              activeFilters.institusi.length === 0
+                ? 'Pilih sektor pada filter Institusi untuk menampilkan grafik.'
+                : 'Data Time Series Triwulanan tidak tersedia.'
+            "
           />
         </div>
       </section>
     </div>
+
+    <TimeSeriesNeracaComparisonChart
+      :annual-data="tahunanKlasifikasiData"
+      :quarterly-data="triwulananKlasifikasiData"
+      :chart-mode="chartMode"
+      :selected-klasifikasi="activeFilters.klasifikasi"
+      :selected-sectors="activeFilters.institusi"
+      :loading="loading"
+    />
+    </template>
   </div>
 </template>

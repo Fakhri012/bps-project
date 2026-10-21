@@ -12,6 +12,10 @@ import {
   ChevronRight
 } from 'lucide-vue-next'
 
+import {
+  formatDatabaseNumber
+} from '../../utils/chartFormatters.js'
+
 /* =========================================================
    PROPS
 ========================================================= */
@@ -71,9 +75,7 @@ function toNumber(value) {
 }
 
 function formatNumber(value) {
-  return toNumber(value).toLocaleString(
-    'id-ID'
-  )
+  return formatDatabaseNumber(toNumber(value))
 }
 
 function calculateAchievement(item) {

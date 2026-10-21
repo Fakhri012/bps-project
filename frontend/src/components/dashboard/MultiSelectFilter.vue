@@ -53,6 +53,11 @@ const props = defineProps({
   options: {
     type: Array,
     default: () => []
+  },
+
+  disabled: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -398,6 +403,10 @@ const allSelected =
 */
 
 function toggleDropdown() {
+  if (props.disabled) {
+    return
+  }
+
   if (open.value) {
     open.value = false
     return
@@ -497,12 +506,15 @@ onBeforeUnmount(() => {
       <button
         v-if="modelValue.length > 0"
         type="button"
+         :disabled="disabled"
         @click.stop="clearSelection"
         class="text-[10px]
                font-semibold
                text-slate-400
                transition
-               hover:text-red-500"
+           hover:text-red-500
+           disabled:cursor-not-allowed
+           disabled:opacity-50"
       >
         Hapus
       </button>
@@ -514,6 +526,8 @@ onBeforeUnmount(() => {
 
     <button
       type="button"
+      :disabled="disabled"
+      :aria-disabled="disabled"
       @click="toggleDropdown"
       class="flex w-full
              items-center
@@ -531,7 +545,11 @@ onBeforeUnmount(() => {
              focus:border-blue-400
              focus:outline-none
              focus:ring-2
-             focus:ring-blue-100"
+             focus:ring-blue-100
+             disabled:cursor-not-allowed
+             disabled:bg-slate-50
+             disabled:text-slate-400
+             disabled:hover:border-slate-200"
     >
 
       <span

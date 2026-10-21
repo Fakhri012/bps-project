@@ -31,6 +31,10 @@ import {
   normalizeDisplayText
 } from '../utils/dashboardText.js'
 
+import {
+  formatDatabaseNumber
+} from '../utils/chartFormatters.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -448,13 +452,7 @@ const totalNilai =
       return 'Tidak ada data'
     }
 
-    return new Intl.NumberFormat(
-      'id-ID',
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }
-    ).format(total)
+    return formatDatabaseNumber(total)
   })
 
 

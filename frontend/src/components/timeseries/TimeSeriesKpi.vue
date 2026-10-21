@@ -11,6 +11,10 @@ import {
   Minus
 } from 'lucide-vue-next'
 
+import {
+  formatDatabaseNumber
+} from '../../utils/chartFormatters.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -50,12 +54,7 @@ function formatValue(
     return '—'
   }
 
-  return new Intl.NumberFormat(
-    'id-ID',
-    {
-      maximumFractionDigits: 2
-    }
-  ).format(number)
+  return formatDatabaseNumber(number)
 }
 
 

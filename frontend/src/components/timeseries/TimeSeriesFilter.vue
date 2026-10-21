@@ -3,7 +3,8 @@ import {
   ref,
   computed,
   watch,
-  onMounted
+  onMounted,
+  nextTick
 } from 'vue'
 
 import {
@@ -54,19 +55,8 @@ const neraca =
 const klasifikasi =
   ref([])
 
-const defaultInstitusi = [
-  'FC',
-  'NFC',
-  'HH',
-  'GG',
-  'NPISHS',
-  'ROW'
-]
-
 const institusi =
-  ref([
-    ...defaultInstitusi
-  ])
+  ref([])
 
   const isInitializing = ref(true)
 
@@ -686,9 +676,12 @@ function resetFilters() {
   neraca.value = []
   klasifikasi.value = []
 
-  institusi.value = [
-    ...defaultInstitusi
-  ]
+  institusi.value = []
+}
+
+function handleNeracaChange(value) {
+  neraca.value = value
+  klasifikasi.value = []
 }
 
 
@@ -732,12 +725,14 @@ onMounted(
   async () => {
     await loadFilterOptions()
 
-    isInitializing.value = false
+    tahun.value =
+      tahunOptions.value.map(
+        option => option.value
+      )
 
-    emit(
-      'change',
-      getCurrentFilters()
-    )
+    await nextTick()
+
+    isInitializing.value = false
   }
 )
 </script>
@@ -987,12 +982,13 @@ onMounted(
 
       <!-- NERACA -->
       <MultiSelectFilter
-        v-model="neraca"
+        :model-value="neraca"
         label="Neraca"
         placeholder="Semua neraca"
         :options="
           neracaOptions
         "
+        @update:model-value="handleNeracaChange"
       />
 
 
@@ -1004,6 +1000,7 @@ onMounted(
         :options="
           klasifikasiOptions
         "
+        :disabled="neraca.length === 0 || loading"
       />
     </div>
   </section>

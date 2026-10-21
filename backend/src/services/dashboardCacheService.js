@@ -47,6 +47,8 @@ let triwulananCache = {
   loadedAt: null
 }
 
+let triwulananLoadingPromise = null
+
 
 /*
 |--------------------------------------------------------------------------
@@ -165,28 +167,47 @@ async function getCachedTriwulananData() {
     return triwulananCache.data
   }
 
-  console.log(
-    'Mengambil data Triwulanan dari Google Sheets...'
-  )
-
-  const rawData =
-    await getTriwulananData()
-
-  const data =
-    mapTriwulananData(
-      rawData
-    )
-
-  triwulananCache = {
-    data,
-    loadedAt: Date.now()
+  if (triwulananLoadingPromise) {
+    return triwulananLoadingPromise
   }
 
-  console.log(
-    `Cache Triwulanan diperbarui: ${data.length} baris`
-  )
+  triwulananLoadingPromise = (async () => {
+    try {
+      console.log(
+        'Mengambil data Triwulanan dari Google Sheets...'
+      )
 
-  return data
+      const rawData =
+        await getTriwulananData()
+
+      const data =
+        mapTriwulananData(
+          rawData
+        )
+
+      triwulananCache = {
+        data,
+        loadedAt: Date.now()
+      }
+
+      console.log(
+        `Cache Triwulanan diperbarui: ${data.length} baris`
+      )
+
+      return data
+    } finally {
+      triwulananLoadingPromise = null
+    }
+  })()
+
+  return triwulananLoadingPromise
+}
+
+async function warmDashboardCache() {
+  await Promise.all([
+    getCachedTahunanData(),
+    getCachedTriwulananData()
+  ])
 }
 
 
@@ -307,6 +328,7 @@ function getTriwulananCacheInfo() {
 module.exports = {
   getCachedTahunanData,
   getCachedTriwulananData,
+  warmDashboardCache,
 
   clearTahunanCache,
   clearTriwulananCache,

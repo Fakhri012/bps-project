@@ -8,6 +8,10 @@ import {
   Trophy
 } from 'lucide-vue-next'
 
+import {
+  formatDatabaseNumber
+} from '../../utils/chartFormatters.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -135,13 +139,7 @@ function formatCurrencyScale(value) {
   }
 
   const formattedValue =
-    new Intl.NumberFormat(
-      'id-ID',
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }
-    ).format(number)
+    formatDatabaseNumber(number)
 
   return {
     value: formattedValue,

@@ -7,7 +7,7 @@ import {
 } from '../../utils/chartColors'
 
 import {
-  formatFixedTwoDecimals as formatNumber
+  formatDatabaseNumber as formatNumber
 } from '../../utils/chartFormatters.js'
 
 

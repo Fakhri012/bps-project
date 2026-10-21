@@ -544,39 +544,164 @@ function buildTahunanTimeSeries(
 
       const nilai =
         Number(item.nilai)
+      const sektor =
+        String(item.sektor ?? '').trim()
 
       if (
         !Number.isFinite(tahun) ||
-        !Number.isFinite(nilai)
+        !Number.isFinite(nilai) ||
+        !sektor
       ) {
         return
       }
 
-      const currentValue =
-        grouped.get(tahun) || 0
+      const key =
+        JSON.stringify([tahun, sektor])
 
-      grouped.set(
+      const current =
+        grouped.get(key)
+
+      if (current) {
+        current.nilai += nilai
+        return
+      }
+
+      const institusi =
+        String(item.institusi ?? sektor).trim()
+
+      grouped.set(key, {
         tahun,
-        currentValue + nilai
-      )
+        seriesName: institusi && institusi !== sektor
+          ? `${institusi} (${sektor})`
+          : sektor,
+        nilai
+      })
     }
   )
 
   return Array.from(
-    grouped.entries()
+    grouped.values()
+  ).sort((a, b) =>
+    a.tahun - b.tahun ||
+    a.seriesName.localeCompare(
+      b.seriesName,
+      'id',
+      {
+        numeric: true,
+        sensitivity: 'base'
+      }
+    )
   )
-    .sort(
-      (a, b) =>
-        a[0] - b[0]
-    )
-    .map(
-      ([tahun, nilai]) => ({
-        tahun,
-        nilai
-      })
-    )
 }
 
+function buildTahunanKlasifikasiTimeSeries(
+  data,
+  selectedFilters = {}
+) {
+  const filteredData =
+    filterAssetData(
+      data,
+      {
+        ...selectedFilters,
+        search: null,
+        triwulan: null
+      }
+    )
+
+  return aggregateKlasifikasiTimeSeries(
+    filteredData,
+    item => {
+      const tahun = Number(item.tahun)
+
+      return Number.isInteger(tahun)
+        ? {
+            tahun,
+            periodKey: tahun
+          }
+        : null
+    }
+  )
+}
+
+
+function aggregateKlasifikasiTimeSeries(
+  data,
+  getPeriod
+) {
+  const grouped = new Map()
+
+  data.forEach(item => {
+    const klasifikasi =
+      String(item.rincian ?? '').trim()
+    const sektor =
+      String(item.sektor ?? '').trim()
+
+    const period =
+      getPeriod(item)
+
+    if (
+      !klasifikasi ||
+      !sektor ||
+      !period ||
+      item.nilai === null ||
+      item.nilai === undefined ||
+      (
+        typeof item.nilai === 'string' &&
+        item.nilai.trim() === ''
+      )
+    ) {
+      return
+    }
+
+    const nilai = Number(item.nilai)
+
+    if (!Number.isFinite(nilai)) {
+      return
+    }
+
+    const key =
+      JSON.stringify([
+        sektor,
+        klasifikasi,
+        period.periodKey
+      ])
+
+    const current =
+      grouped.get(key)
+
+    if (current) {
+      current.nilai += nilai
+      return
+    }
+
+    grouped.set(
+      key,
+      {
+        ...period,
+        sektor,
+        klasifikasi,
+        nilai
+      }
+    )
+  })
+
+  return Array.from(
+    grouped.values()
+  ).sort((a, b) => {
+    if (a.periodKey !== b.periodKey) {
+      return a.periodKey < b.periodKey ? -1 : 1
+    }
+
+    return a.klasifikasi.localeCompare(
+      b.klasifikasi,
+      'id',
+      {
+        numeric: true,
+        sensitivity: 'base'
+      }
+    )
+  }).map(({ periodKey, ...item }) => item)
+}
 
 
 /*
@@ -623,19 +748,26 @@ function buildTriwulananTimeSeries(
 
       const nilai =
         Number(item.nilai)
+      const sektor =
+        String(item.sektor ?? '').trim()
 
       if (
         !Number.isFinite(tahun) ||
         !Number.isInteger(triwulan) ||
         triwulan < 1 ||
         triwulan > 4 ||
-        !Number.isFinite(nilai)
+        !Number.isFinite(nilai) ||
+        !sektor
       ) {
         return
       }
 
       const key =
-        `${tahun}-Q${triwulan}`
+        JSON.stringify([
+          tahun,
+          triwulan,
+          sektor
+        ])
 
       const current =
         grouped.get(key)
@@ -645,40 +777,74 @@ function buildTriwulananTimeSeries(
         return
       }
 
-      grouped.set(
-        key,
-        {
-          tahun,
-          triwulan,
-          periode:
-            `${tahun} Q${triwulan}`,
-          nilai
-        }
-      )
+      const institusi =
+        String(item.institusi ?? sektor).trim()
+
+      grouped.set(key, {
+        tahun,
+        triwulan,
+        periode: `${tahun} Q${triwulan}`,
+        seriesName: institusi && institusi !== sektor
+          ? `${institusi} (${sektor})`
+          : sektor,
+        nilai
+      })
     }
   )
 
   return Array.from(
     grouped.values()
-  )
-    .sort(
-      (a, b) => {
-        if (
-          a.tahun !==
-          b.tahun
-        ) {
-          return (
-            a.tahun -
-            b.tahun
-          )
+  ).sort(
+    (a, b) =>
+      a.tahun - b.tahun ||
+      a.triwulan - b.triwulan ||
+      a.seriesName.localeCompare(
+        b.seriesName,
+        'id',
+        {
+          numeric: true,
+          sensitivity: 'base'
         }
+      )
+  )
+}
 
-        return (
-          a.triwulan -
-          b.triwulan
-        )
+function buildTriwulananKlasifikasiTimeSeries(
+  data,
+  selectedFilters = {}
+) {
+  const filteredData =
+    filterAssetData(
+      data,
+      {
+        ...selectedFilters,
+        search: null
       }
     )
+
+  return aggregateKlasifikasiTimeSeries(
+    filteredData,
+    item => {
+      const tahun = Number(item.tahun)
+      const triwulan = Number(item.triwulan)
+
+      if (
+        !Number.isFinite(tahun) ||
+        !Number.isInteger(triwulan) ||
+        triwulan < 1 ||
+        triwulan > 4
+      ) {
+        return null
+      }
+
+      return {
+        tahun,
+        triwulan,
+        periode: `${tahun} Q${triwulan}`,
+        periodKey: tahun * 10 + triwulan
+      }
+    }
+  )
 }
 
 
@@ -1519,6 +1685,12 @@ async function getTahunanTimeSeries(
         selectedFilters
       )
 
+    const statistikKlasifikasi =
+      buildTahunanKlasifikasiTimeSeries(
+        data,
+        selectedFilters
+      )
+
 
 res.json({
   success: true,
@@ -1531,7 +1703,9 @@ res.json({
 
   totalPoints: timeSeries.length,
 
-  data: timeSeries
+  data: timeSeries,
+
+  statistikKlasifikasi
 })
 
   } catch (error) {
@@ -1615,6 +1789,12 @@ async function getTriwulananTimeSeries(
         selectedFilters
       )
 
+    const statistikKlasifikasi =
+      buildTriwulananKlasifikasiTimeSeries(
+        data,
+        selectedFilters
+      )
+
 
 res.json({
   success: true,
@@ -1627,7 +1807,9 @@ res.json({
 
   totalPoints: timeSeries.length,
 
-  data: timeSeries
+  data: timeSeries,
+
+  statistikKlasifikasi
 })
 
   } catch (error) {
@@ -2022,6 +2204,10 @@ getTriwulananAssetFilters,
 
 getTahunanTimeSeries,
 getTriwulananTimeSeries,
+buildTahunanTimeSeries,
+buildTriwulananTimeSeries,
+buildTahunanKlasifikasiTimeSeries,
+buildTriwulananKlasifikasiTimeSeries,
 
 
   /*

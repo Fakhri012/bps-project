@@ -120,7 +120,8 @@ function selectMenu(
       z-40
       flex
       h-screen
-      w-64
+      w-16
+      md:w-64
       flex-col
       overflow-hidden
       border-r
@@ -141,16 +142,21 @@ function selectMenu(
 
     <div
       class="
-        px-5
+        px-2
         pb-5
-        pt-6
+        pt-4
+        md:px-5
+        md:pt-6
       "
     >
       <div
         class="
           flex
           items-center
-          gap-3
+          justify-center
+          gap-0
+          md:justify-start
+          md:gap-3
         "
       >
         <!-- LOGO -->
@@ -177,7 +183,7 @@ function selectMenu(
 
 
         <!-- BRAND -->
-        <div class="min-w-0">
+        <div class="hidden min-w-0 md:block">
           <h1
             class="
               text-xl
@@ -222,7 +228,8 @@ function selectMenu(
     <nav
       class="
         mt-4
-        px-3
+        px-1
+        md:px-3
       "
     >
       <div
@@ -244,16 +251,22 @@ function selectMenu(
             flex
             w-full
             items-center
-            gap-3
+            justify-center
+            gap-0
             rounded-xl
-            px-3.5
+            px-0
             py-3
             text-left
             text-sm
             font-medium
             transition-all
             duration-200
+            md:justify-start
+            md:gap-3
+            md:px-3.5
           "
+          :aria-label="menu.name"
+          :title="menu.name"
           :class="
             activeMenu ===
             menu.name
@@ -287,7 +300,8 @@ function selectMenu(
             "
             class="
               absolute
-              -left-3
+              -left-1
+              md:-left-3
               h-7
               w-1
               rounded-r-full
@@ -323,7 +337,9 @@ function selectMenu(
           <!-- NAME -->
           <span
             class="
-              flex-1
+              sr-only
+              md:not-sr-only
+              md:flex-1
             "
           >
             {{ menu.name }}
@@ -338,7 +354,9 @@ function selectMenu(
             "
             :size="15"
             class="
+              hidden
               text-blue-100/70
+              md:block
             "
           />
         </button>
@@ -370,10 +388,12 @@ function selectMenu(
 
     <div
       class="
+        hidden
         relative
         mt-auto
         min-h-[300px]
         overflow-hidden
+        md:block
       "
     >
       <!-- FOTO GEDUNG -->

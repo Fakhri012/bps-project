@@ -16,6 +16,10 @@ import {
   Database
 } from 'lucide-vue-next'
 
+import {
+  formatDatabaseNumber
+} from '../../utils/chartFormatters.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -87,22 +91,12 @@ function formatNilai(value) {
     return String(value)
   }
 
-  return new Intl.NumberFormat(
-    'id-ID',
-    {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }
-  ).format(number)
+  return formatDatabaseNumber(number)
 }
 
 
 function formatTotal(value) {
-  return new Intl.NumberFormat(
-    'id-ID'
-  ).format(
-    Number(value) || 0
-  )
+  return formatDatabaseNumber(Number(value) || 0)
 }
 
 

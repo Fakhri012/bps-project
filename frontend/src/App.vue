@@ -98,7 +98,8 @@ function handleMenuChange(
 
     <div
       class="
-        ml-64
+        ml-16
+        md:ml-64
         min-h-screen
       "
     >
@@ -120,7 +121,8 @@ function handleMenuChange(
       <main
         class="
           min-h-[calc(100vh-64px)]
-          p-6
+          p-3
+          sm:p-6
           lg:p-8
         "
       >
