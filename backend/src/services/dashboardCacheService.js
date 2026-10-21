@@ -19,7 +19,7 @@ const {
 */
 
 const CACHE_TTL =
-  3 * 60 * 1000
+  5 * 60 * 1000
 
 
 /*
@@ -32,6 +32,8 @@ let tahunanCache = {
   data: null,
   loadedAt: null
 }
+
+let tahunanLoadingPromise = null
 
 
 /*
@@ -83,28 +85,68 @@ async function getCachedTahunanData() {
     return tahunanCache.data
   }
 
-  console.log(
-    'Mengambil data Tahunan dari Google Sheets...'
-  )
 
-  const rawData =
-    await getTahunanData()
+  /*
+   * Kalau sedang ada proses loading,
+   * request berikutnya cukup menunggu
+   * proses tersebut.
+   */
 
-  const data =
-    mapTahunanData(
-      rawData
-    )
-
-  tahunanCache = {
-    data,
-    loadedAt: Date.now()
+  if (
+    tahunanLoadingPromise
+  ) {
+    return tahunanLoadingPromise
   }
 
-  console.log(
-    `Cache Tahunan diperbarui: ${data.length} baris`
-  )
 
-  return data
+  /*
+   * Tandai proses loading sedang berjalan.
+   */
+
+  tahunanLoadingPromise =
+    (async () => {
+      try {
+        console.log(
+          'Mengambil data Tahunan dari Google Sheets...'
+        )
+
+        const rawData =
+          await getTahunanData()
+
+
+        const data =
+          mapTahunanData(
+            rawData
+          )
+
+
+        tahunanCache = {
+          data,
+          loadedAt:
+            Date.now()
+        }
+
+
+        console.log(
+          `Cache Tahunan diperbarui: ${data.length} baris`
+        )
+
+
+        return data
+
+      } finally {
+        /*
+         * Setelah selesai,
+         * izinkan proses loading berikutnya.
+         */
+
+        tahunanLoadingPromise =
+          null
+      }
+    })()
+
+
+  return tahunanLoadingPromise
 }
 
 

@@ -18,6 +18,8 @@ import AssetView
 import TimeSeriesView
   from './views/TimeSeriesView.vue'
 
+import AnalisisRasioView
+  from './views/AnalisisRasioView.vue'
 
 /*
 |--------------------------------------------------------------------------
@@ -29,7 +31,11 @@ import TimeSeriesView
 */
 
 const activeMenu =
-  ref('Dashboard')
+  ref(
+    localStorage.getItem(
+      'activeMenu'
+    ) || 'Dashboard'
+  )
 
 
 /*
@@ -48,6 +54,11 @@ function handleMenuChange(
 ) {
   activeMenu.value =
     menu
+
+  localStorage.setItem(
+    'activeMenu',
+    menu
+  )
 }
 </script>
 
@@ -132,7 +143,7 @@ function handleMenuChange(
         <AssetView
           v-else-if="
             activeMenu ===
-            'Asset Data'
+            'Database'
           "
         />
 
@@ -147,7 +158,16 @@ function handleMenuChange(
             'Time Series'
           "
         />
+<!-- =====================================================
+     ANALISIS RASIO
+====================================================== -->
 
+<AnalisisRasioView
+  v-else-if="
+    activeMenu ===
+    'Analisis Rasio'
+  "
+/>
 
         <!-- =====================================================
              FALLBACK

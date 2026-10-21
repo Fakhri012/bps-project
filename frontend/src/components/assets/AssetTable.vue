@@ -653,7 +653,7 @@ function getNilaiClass(value) {
                 text-slate-900
               "
             >
-              Data Asset
+              Database
             </h3>
 
             <span

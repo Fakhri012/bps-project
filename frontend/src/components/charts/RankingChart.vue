@@ -6,6 +6,10 @@ import {
   getChartColor
 } from '../../utils/chartColors'
 
+import {
+  formatFixedTwoDecimals as formatNumber
+} from '../../utils/chartFormatters.js'
+
 
 const props = defineProps({
   labels: {
@@ -18,20 +22,6 @@ const props = defineProps({
     default: () => []
   }
 })
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMAT ANGKA
-|--------------------------------------------------------------------------
-*/
-
-function formatNumber(value) {
-  return new Intl.NumberFormat('id-ID', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(Number(value) || 0)
-}
 
 
 /*

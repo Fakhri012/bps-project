@@ -482,7 +482,7 @@ function handleLimitChange(limit) {
             text-cyan-700
           "
         >
-          Asset Data
+          Database
         </span>
       </div>
 

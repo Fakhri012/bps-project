@@ -10,6 +10,11 @@ import {
 import * as echarts
   from 'echarts'
 
+import {
+  formatTimeSeriesAxis as formatAxis,
+  formatTimeSeriesNumber as formatNumber
+} from '../../utils/chartFormatters.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -49,66 +54,6 @@ const chartRef =
 
 let chartInstance =
   null
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMAT NUMBER
-|--------------------------------------------------------------------------
-*/
-
-function formatNumber(
-  value
-) {
-  const number =
-    Number(value)
-
-  if (
-    !Number.isFinite(number)
-  ) {
-    return '0'
-  }
-
-  return new Intl.NumberFormat(
-    'id-ID',
-    {
-      maximumFractionDigits: 2
-    }
-  ).format(number)
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMAT AXIS
-|--------------------------------------------------------------------------
-*/
-
-function formatAxis(
-  value
-) {
-  const number =
-    Number(value)
-
-  if (
-    !Number.isFinite(number)
-  ) {
-    return '0,00 T'
-  }
-
-  const trillion =
-    number / 1000000
-
-  return (
-    trillion.toLocaleString(
-      'id-ID',
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }
-    ) + ' T'
-  )
-}
 
 
 /*

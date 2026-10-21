@@ -54,6 +54,14 @@ const excludedDashboardSectors = [
   'TOTAL EKN'
 ]
 
+const defaultDashboardSectors = [
+  "FC",
+  "NFC",
+  "HH",
+  "GG",
+  "NPISHS",
+  "ROW",
+];
 /*
 |--------------------------------------------------------------------------
 | INSTITUSI YANG DISEMBUNYIKAN DI DASHBOARD
@@ -561,6 +569,30 @@ function mapTahunanData(rows) {
 | FC 2,NFC,ROW
 |
 */
+function getDashboardData(data, selectedFilters = {}) {
+  let dashboardData = data.filter((item) => {
+    return (
+      isDashboardSector(item.sektor) &&
+      isDashboardInstitution(item.sektor)
+    );
+  });
+
+  const selectedInstitusi = parseMultiFilter(
+    selectedFilters.institusi
+  ).map((item) => item.toUpperCase());
+
+  // Jika tidak memilih institusi,
+  // Dashboard hanya menampilkan 6 sektor default.
+  if (selectedInstitusi.length === 0) {
+    dashboardData = dashboardData.filter((item) =>
+      defaultDashboardSectors.includes(
+        item.sektor.toUpperCase()
+      )
+    );
+  }
+
+  return dashboardData;
+}
 
 function parseMultiFilter(value) {
   if (!value) {
@@ -586,22 +618,10 @@ function parseMultiFilter(value) {
 |--------------------------------------------------------------------------
 */
 
-function filterTahunanData(
-  data,
-  selectedFilters = {}
-) {
-  /*
-   * TOTAL dan TOTAL EKN
-   * tidak digunakan pada output dashboard.
-   */
+function filterTahunanData(data, selectedFilters = {}) {
+  let filteredData = getDashboardData(data, selectedFilters);
 
-  let filteredData =
-    data.filter(
-      (item) =>
-        isDashboardSector(
-          item.sektor
-        )
-    )
+  // sisanya tetap
 
 
   /*
@@ -782,13 +802,12 @@ function generateTahunanFilters(
    * TOTAL dan TOTAL EKN tidak disertakan.
    */
 
-  const dashboardData =
-    data.filter(
-      (item) =>
-        isDashboardSector(
-          item.sektor
-        )
-    )
+const dashboardData =
+  data.filter(
+    (item) =>
+      isDashboardSector(item.sektor) &&
+      isDashboardInstitution(item.sektor)
+  )
 
 
   /*
@@ -966,13 +985,12 @@ function generateTahunanFilters(
 
   institusiData.forEach(
     (item) => {
-      if (
-        !isDashboardSector(
-          item.sektor
-        )
-      ) {
-        return
-      }
+if (
+  !isDashboardSector(item.sektor) ||
+  !isDashboardInstitution(item.sektor)
+) {
+  return
+}
 
       if (
         !institusiResult.has(
@@ -1118,33 +1136,12 @@ function getInstitusiOptions(data) {
 |
 */
 
-function generateTahunanSummary(
-  data,
-  selectedFilters = {}
-) {
-  const filteredData =
-    filterTahunanData(
-      data,
-      selectedFilters
-    )
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | GROUP PER SEKTOR
-  |--------------------------------------------------------------------------
-  */
-
+function generateSummaryFromFilteredData(filteredData) {
   const institusiMapResult =
     new Map()
 
   filteredData.forEach(
     (item) => {
-      /*
-       * NILAI kosong/null
-       * tidak dihitung.
-       */
-
       if (
         item.nilai === null ||
         !Number.isFinite(
@@ -1160,13 +1157,6 @@ function generateTahunanSummary(
       const nama =
         item.institusi ||
         item.sektor
-
-      /*
-       * Group berdasarkan kode sektor.
-       *
-       * Jangan group berdasarkan nama,
-       * karena kode asli tetap penting.
-       */
 
       if (
         !institusiMapResult.has(
@@ -1193,13 +1183,6 @@ function generateTahunanSummary(
     }
   )
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | SORT RANKING
-  |--------------------------------------------------------------------------
-  */
-
   const institusi =
     Array.from(
       institusiMapResult.values()
@@ -1209,26 +1192,12 @@ function generateTahunanSummary(
           b.nilai - a.nilai
       )
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | TOTAL NILAI
-  |--------------------------------------------------------------------------
-  */
-
   const totalNilai =
     institusi.reduce(
       (total, item) =>
         total + item.nilai,
       0
     )
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | KONTRIBUTOR TERBESAR
-  |--------------------------------------------------------------------------
-  */
 
   const kontributorTerbesar =
     institusi.length > 0
@@ -1244,13 +1213,6 @@ function generateTahunanSummary(
         }
       : null
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | RESPONSE
-  |--------------------------------------------------------------------------
-  */
-
   return {
     jumlahBaris:
       filteredData.length,
@@ -1261,6 +1223,21 @@ function generateTahunanSummary(
 
     institusi
   }
+}
+
+function generateTahunanSummary(
+  data,
+  selectedFilters = {}
+) {
+  const filteredData =
+    filterTahunanData(
+      data,
+      selectedFilters
+    )
+
+  return generateSummaryFromFilteredData(
+    filteredData
+  )
 }
 
 
@@ -1431,53 +1408,30 @@ function mapTriwulananRow(row) {
 
 
 function normalizeSektor(sektor) {
-  if (
-    sektor === null ||
-    sektor === undefined
-  ) {
-    return sektor
+  if (sektor === null || sektor === undefined) return sektor;
+
+  let value = String(sektor).trim().toUpperCase();
+
+  // NFC utama
+  if (/^NFC(?:\s+\d+)?$/.test(value)) {
+    return "NFC";
   }
 
-  let value =
-    String(sektor)
-      .trim()
-      .toUpperCase()
-
-  /*
-   * Semua NFC dianggap
-   * sebagai satu sektor:
-   *
-   * NFC
-   * NFC 2
-   * NFC PRIVATE
-   * NFC PUBLIC
-   * NFC PRIVATE 2
-   * NFC PUBLIC 2
-   * dst.
-   */
-
-  if (
-    /^NFC(?:\s+(?:PRIVATE|PUBLIC))?(?:\s+\d+)?$/.test(
-      value
-    )
-  ) {
-    return 'NFC'
+  // NFC PRIVATE tetap dibedakan
+  if (/^NFC PRIVATE(?:\s+\d+)?$/.test(value)) {
+    return "NFC PRIVATE";
   }
 
-  /*
-   * Sektor lain:
-   *
-   * GG 2 -> GG
-   * ODC 2 -> ODC
-   * Total EKN 2 -> Total EKN
-   */
+  // NFC PUBLIC tetap dibedakan
+  if (/^NFC PUBLIC(?:\s+\d+)?$/.test(value)) {
+    return "NFC PUBLIC";
+  }
 
-  return value
-    .replace(
-      /\s+\d+$/,
-      ''
-    )
-    .trim()
+  // FC 2 -> FC
+  // GG 2 -> GG
+  // ODC 2 -> ODC
+  // dst.
+  return value.replace(/\s+\d+$/, "").trim();
 }
 
 function mergeBySektor(data) {
@@ -1576,13 +1530,7 @@ function filterTriwulananData(
    * tidak digunakan pada output dashboard.
    */
 
-  let filteredData =
-    data.filter(
-      (item) =>
-        isDashboardSector(
-          item.sektor
-        )
-    )
+let filteredData = getDashboardData(data, selectedFilters);
 
 
   /*
@@ -1785,13 +1733,12 @@ function generateTriwulananFilters(
    * hanya dari layer dashboard.
    */
 
-  const dashboardData =
-    data.filter(
-      (item) =>
-        isDashboardSector(
-          item.sektor
-        )
-    )
+const dashboardData =
+  data.filter(
+    (item) =>
+      isDashboardSector(item.sektor) &&
+      isDashboardInstitution(item.sektor)
+  )
 
 
   /*
@@ -2035,13 +1982,12 @@ function generateTriwulananFilters(
 
   institusiData.forEach(
     (item) => {
-      if (
-        !isDashboardSector(
-          item.sektor
-        )
-      ) {
-        return
-      }
+if (
+  !isDashboardSector(item.sektor) ||
+  !isDashboardInstitution(item.sektor)
+) {
+  return
+}
 
       if (
         !institusiMapResult.has(
@@ -2129,149 +2075,9 @@ function generateTriwulananSummary(
       selectedFilters
     )
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | GROUP BERDASARKAN SEKTOR
-  |--------------------------------------------------------------------------
-  */
-
-  const institusiMapResult =
-    new Map()
-
-  filteredData.forEach(
-    (item) => {
-      /*
-       * NILAI kosong/null
-       * tidak dihitung.
-       *
-       * Saat Pivot mentor masih kosong,
-       * bagian ini otomatis dilewati.
-       */
-
-      if (
-        item.nilai === null ||
-        !Number.isFinite(
-          item.nilai
-        )
-      ) {
-        return
-      }
-
-      const kode =
-        item.sektor
-
-      const nama =
-        item.institusi ||
-        item.sektor
-
-
-      /*
-       * Buat institusi jika
-       * belum ada.
-       */
-
-      if (
-        !institusiMapResult.has(
-          kode
-        )
-      ) {
-        institusiMapResult.set(
-          kode,
-          {
-            kode,
-            nama,
-            nilai: 0
-          }
-        )
-      }
-
-
-      /*
-       * Tambahkan NILAI.
-       */
-
-      const current =
-        institusiMapResult.get(
-          kode
-        )
-
-      current.nilai +=
-        item.nilai
-    }
+  return generateSummaryFromFilteredData(
+    filteredData
   )
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | URUTKAN BERDASARKAN NILAI
-  |--------------------------------------------------------------------------
-  |
-  | Terbesar → terkecil.
-  |
-  */
-
-  const institusi =
-    Array.from(
-      institusiMapResult.values()
-    )
-      .sort(
-        (a, b) =>
-          b.nilai - a.nilai
-      )
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | TOTAL NILAI
-  |--------------------------------------------------------------------------
-  */
-
-  const totalNilai =
-    institusi.reduce(
-      (total, item) =>
-        total + item.nilai,
-      0
-    )
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | KONTRIBUTOR TERBESAR
-  |--------------------------------------------------------------------------
-  */
-
-  const kontributorTerbesar =
-    institusi.length > 0
-      ? {
-          kode:
-            institusi[0].kode,
-
-          nama:
-            institusi[0].nama,
-
-          nilai:
-            institusi[0].nilai
-        }
-      : null
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | RESPONSE
-  |--------------------------------------------------------------------------
-  */
-
-  return {
-    jumlahBaris:
-      filteredData.length,
-
-    totalNilai,
-
-    kontributorTerbesar,
-
-    institusi
-  }
 }
 
 /*

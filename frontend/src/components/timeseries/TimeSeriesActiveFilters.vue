@@ -3,18 +3,6 @@ import {
   computed
 } from 'vue'
 
-import {
-  Filter,
-  X
-} from 'lucide-vue-next'
-
-
-/*
-|--------------------------------------------------------------------------
-| PROPS
-|--------------------------------------------------------------------------
-*/
-
 const props =
   defineProps({
     filters: {
@@ -26,34 +14,30 @@ const props =
         sisi: [],
         neraca: [],
         klasifikasi: [],
-        institusi: []
+        institusi: [],
+
+        allFilters: {
+          tahun: true,
+          triwulan: true,
+          sisi: true,
+          neraca: true,
+          klasifikasi: true,
+          institusi: true
+        }
       })
     }
   })
 
-
-/*
-|--------------------------------------------------------------------------
-| EMIT
-|--------------------------------------------------------------------------
-*/
-
 const emit =
   defineEmits([
-    'remove',
     'reset'
   ])
 
+/* =========================
+   HELPER
+========================= */
 
-/*
-|--------------------------------------------------------------------------
-| NORMALIZE ARRAY
-|--------------------------------------------------------------------------
-*/
-
-function toArray(
-  value
-) {
+function toArray(value) {
   if (
     Array.isArray(value)
   ) {
@@ -73,363 +57,472 @@ function toArray(
   ]
 }
 
+function getOptionValue(
+  value
+) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return ''
+  }
 
-/*
-|--------------------------------------------------------------------------
-| CHIP DATA
-|--------------------------------------------------------------------------
-*/
+  if (
+    typeof value === 'object'
+  ) {
+    if (
+      value.value !== undefined &&
+      value.value !== null
+    ) {
+      return String(
+        value.value
+      ).trim()
+    }
 
-const chips =
+    if (
+      value.label !== undefined &&
+      value.label !== null
+    ) {
+      return String(
+        value.label
+      ).trim()
+    }
+
+    if (
+      value.name !== undefined &&
+      value.name !== null
+    ) {
+      return String(
+        value.name
+      ).trim()
+    }
+  }
+
+  return String(
+    value
+  ).trim()
+}
+
+function formatList(
+  items
+) {
+  const values =
+    toArray(items)
+      .map(
+        getOptionValue
+      )
+      .filter(Boolean)
+
+  if (
+    values.length === 0
+  ) {
+    return ''
+  }
+
+  if (
+    values.length === 1
+  ) {
+    return values[0]
+  }
+
+  if (
+    values.length === 2
+  ) {
+    return `${values[0]} dan ${values[1]}`
+  }
+
+  return (
+    values
+      .slice(
+        0,
+        -1
+      )
+      .join(', ')
+    +
+    ', dan '
+    +
+    values[
+      values.length - 1
+    ]
+  )
+}
+
+/* =========================
+   NAMA INSTITUSI
+========================= */
+
+const institusiNames = {
+  FC:
+    'Korporasi Finansial',
+
+  NFC:
+    'Korporasi Nonfinansial',
+
+  HH:
+    'Rumah Tangga',
+
+  GG:
+    'Pemerintah Umum',
+
+  NPISHS:
+    'LNPRT',
+
+  ROW:
+    'Luar Negeri'
+}
+
+const formattedInstitusi =
   computed(() => {
-    const result = []
 
+    const values =
+      toArray(
+        props.filters.institusi
+      )
 
-    /*
-    |--------------------------------------------------------------------------
-    | TAHUN
-    |--------------------------------------------------------------------------
-    */
+    if (
+      values.length === 0
+    ) {
+      return []
+    }
 
-    toArray(
-      props.filters.tahun
-    ).forEach(
+    return values.map(
       value => {
-        result.push({
-          key:
-            'tahun',
 
-          group:
-            'Tahun',
+        const code =
+          getOptionValue(
+            value
+          )
 
-          value:
-            String(value),
-
-          label:
-            String(value)
-        })
+        return (
+          institusiNames[
+            code
+          ]
+          ||
+          code
+        )
       }
     )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | TRIWULAN
-    |--------------------------------------------------------------------------
-    */
-
-    toArray(
-      props.filters.triwulan
-    ).forEach(
-      value => {
-        const raw =
-          String(value)
-
-        result.push({
-          key:
-            'triwulan',
-
-          group:
-            'Triwulan',
-
-          value:
-            raw,
-
-          label:
-            raw
-              .toUpperCase()
-              .startsWith('Q')
-                ? raw.toUpperCase()
-                : `Q${raw}`
-        })
-      }
-    )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | JENIS / SISI
-    |--------------------------------------------------------------------------
-    */
-
-    toArray(
-      props.filters.sisi
-    ).forEach(
-      value => {
-        result.push({
-          key:
-            'sisi',
-
-          group:
-            'Jenis',
-
-          value:
-            String(value),
-
-          label:
-            String(value)
-        })
-      }
-    )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | INSTITUSI
-    |--------------------------------------------------------------------------
-    */
-
-    toArray(
-      props.filters.institusi
-    ).forEach(
-      value => {
-        result.push({
-          key:
-            'institusi',
-
-          group:
-            'Institusi',
-
-          value:
-            String(value),
-
-          label:
-            String(value)
-        })
-      }
-    )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | NERACA
-    |--------------------------------------------------------------------------
-    */
-
-    toArray(
-      props.filters.neraca
-    ).forEach(
-      value => {
-        result.push({
-          key:
-            'neraca',
-
-          group:
-            'Neraca',
-
-          value:
-            String(value),
-
-          label:
-            String(value)
-        })
-      }
-    )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | KLASIFIKASI
-    |--------------------------------------------------------------------------
-    */
-
-    toArray(
-      props.filters.klasifikasi
-    ).forEach(
-      value => {
-        result.push({
-          key:
-            'klasifikasi',
-
-          group:
-            'Klasifikasi',
-
-          value:
-            String(value),
-
-          label:
-            String(value)
-        })
-      }
-    )
-
-
-    return result
   })
 
+/* =========================
+   FORMAT TRIWULAN
+========================= */
 
-/*
-|--------------------------------------------------------------------------
-| REMOVE
-|--------------------------------------------------------------------------
-*/
-
-function removeChip(
-  chip
+function formatTriwulan(
+  value
 ) {
+  const raw =
+    getOptionValue(
+      value
+    )
+
+  return raw
+    .toUpperCase()
+    .startsWith('Q')
+    ? raw.toUpperCase()
+    : `Q${raw}`
+}
+
+/* =========================
+   DESKRIPSI
+========================= */
+
+const description =
+  computed(() => {
+
+    const filters =
+      props.filters
+
+    const tahun =
+      toArray(
+        filters.tahun
+      )
+
+    const triwulan =
+      toArray(
+        filters.triwulan
+      )
+
+    const sisi =
+      toArray(
+        filters.sisi
+      )
+
+    const neraca =
+      toArray(
+        filters.neraca
+      )
+
+    const klasifikasi =
+      toArray(
+        filters.klasifikasi
+      )
+
+    /*
+     * Status "semua" dikirim
+     * langsung dari TimeSeriesFilter.
+     */
+    const allFilters =
+      filters.allFilters ||
+      {}
+
+    const semuaTahun =
+      allFilters.tahun === true
+
+    const semuaTriwulan =
+      allFilters.triwulan === true
+
+    const semuaJenis =
+      allFilters.sisi === true
+
+    const semuaNeraca =
+      allFilters.neraca === true
+
+    const semuaKlasifikasi =
+      allFilters.klasifikasi === true
+
+    const semuaInstitusi =
+      allFilters.institusi === true
+
+    /* =========================
+       TAHUN
+    ========================= */
+
+    let tahunText = ''
+
+    if (
+      semuaTahun
+    ) {
+
+      tahunText =
+        'semua tahun'
+
+    } else {
+
+      tahunText =
+        `tahun ${formatList(
+          tahun
+        )}`
+    }
+
+    /* =========================
+       TRIWULAN
+    ========================= */
+
+    let triwulanText = ''
+
+    if (
+      semuaTriwulan
+    ) {
+
+      triwulanText =
+        'semua triwulan'
+
+    } else {
+
+      triwulanText =
+        `triwulan ${formatList(
+          triwulan.map(
+            formatTriwulan
+          )
+        )}`
+    }
+
+    /* =========================
+       PERIODE
+    ========================= */
+
+    let periode = ''
+
+    if (
+      semuaTahun &&
+      semuaTriwulan
+    ) {
+
+      periode =
+        'semua tahun dan semua triwulan'
+
+    } else if (
+      semuaTahun
+    ) {
+
+      periode =
+        `semua tahun pada ${triwulanText}`
+
+    } else if (
+      semuaTriwulan
+    ) {
+
+      periode =
+        `${tahunText} pada semua triwulan`
+
+    } else {
+
+      periode =
+        `${tahunText} pada ${triwulanText}`
+    }
+
+    /* =========================
+       JENIS
+    ========================= */
+
+    let jenisText = ''
+
+    if (
+      semuaJenis
+    ) {
+
+      jenisText =
+        'semua jenis'
+
+    } else {
+
+      jenisText =
+        `jenis ${formatList(
+          sisi
+        )}`
+    }
+
+    /* =========================
+       NERACA
+    ========================= */
+
+    let neracaText = ''
+
+    if (
+      semuaNeraca
+    ) {
+
+      neracaText =
+        'semua neraca'
+
+    } else {
+
+      neracaText =
+        `neraca ${formatList(
+          neraca
+        )}`
+    }
+
+    /* =========================
+       KLASIFIKASI
+    ========================= */
+
+    let klasifikasiText = ''
+
+    if (
+      semuaKlasifikasi
+    ) {
+
+      klasifikasiText =
+        'semua klasifikasi'
+
+    } else {
+
+      klasifikasiText =
+        `klasifikasi ${formatList(
+          klasifikasi
+        )}`
+    }
+
+    /* =========================
+       INSTITUSI
+    ========================= */
+
+    let institusiText = ''
+
+    if (
+      semuaInstitusi
+    ) {
+
+      institusiText =
+        'semua sektor'
+
+    } else {
+
+      institusiText =
+        `sektor ${formatList(
+          formattedInstitusi.value
+        )}`
+    }
+
+    /* =========================
+       HASIL AKHIR
+    ========================= */
+
+    return (
+      `Menampilkan data neraca sektoral untuk ${periode}, dengan ${jenisText}, pada ${neracaText}, dengan ${klasifikasiText}, dan mencakup ${institusiText}.`
+    )
+  })
+
+/* =========================
+   RESET
+========================= */
+
+function resetFilters() {
   emit(
-    'remove',
-    chip
+    'reset'
   )
 }
 </script>
 
-
 <template>
-  <!-- TAMPIL HANYA JIKA ADA FILTER -->
   <section
-    v-if="
-      chips.length > 0
-    "
     class="
-      flex
-      flex-col
-      gap-3
-      rounded-xl
+      rounded-2xl
       border
-      border-slate-200/80
+      border-slate-200
       bg-white
-      px-4
-      py-3
-      shadow-[0_1px_3px_rgba(15,23,42,0.03)]
-      lg:flex-row
-      lg:items-center
-      lg:justify-between
+      p-5
+      shadow-sm
     "
   >
-    <!-- LEFT -->
     <div
       class="
         flex
-        min-w-0
         items-start
-        gap-2.5
+        justify-between
+        gap-4
       "
     >
-      <!-- ICON -->
-      <div
-        class="
-          flex
-          h-8
-          w-8
-          shrink-0
-          items-center
-          justify-center
-          rounded-lg
-          bg-slate-100
-          text-slate-500
-        "
-      >
-        <Filter
-          :size="14"
-          :stroke-width="1.8"
-        />
-      </div>
+      <div>
+        <h2
+          class="
+            text-base
+            font-bold
+            text-slate-900
+          "
+        >
+          Time Series Neraca Sektoral
+        </h2>
 
-
-      <!-- CHIPS -->
-      <div
-        class="
-          min-w-0
-          flex-1
-        "
-      >
         <p
           class="
-            text-[9px]
-            font-bold
-            uppercase
-            tracking-[0.12em]
-            text-slate-400
-          "
-        >
-          Filter Aktif
-        </p>
-
-
-        <div
-          class="
             mt-1.5
-            flex
-            max-w-full
-            items-center
-            gap-1.5
-            overflow-x-auto
-            pb-1
+            text-xs
+            leading-5
+            text-slate-500
           "
         >
-<div
-  v-for="chip in chips"
-            :key="
-              `${chip.key}-${chip.value}`
-            "
-            type="button"
-            class="
-              group
-              inline-flex
-              shrink-0
-              items-center
-              gap-1.5
-              rounded-lg
-              border
-              border-slate-200
-              bg-slate-50
-              px-2.5
-              py-1.5
-              text-[10px]
-              font-medium
-              text-slate-600
-              transition
-              hover:border-red-200
-              hover:bg-red-50
-              hover:text-red-600
-            "
-            :title="
-              `Hapus ${chip.group}: ${chip.label}`
-            "
-
-          >
-            <span
-              class="
-                font-bold
-                text-slate-400
-                group-hover:text-red-400
-              "
-            >
-              {{ chip.group }}:
-            </span>
-
-            <span>
-              {{ chip.label }}
-            </span>
-
-
-</div>
-        </div>
+          {{ description }}
+        </p>
       </div>
-    </div>
 
-
-    <!-- RIGHT -->
-    <div
-      class="
-        shrink-0
-      "
-    >
       <button
         type="button"
         class="
+          shrink-0
+          rounded-lg
+          px-2.5
+          py-1.5
           text-[10px]
           font-semibold
           text-slate-400
           transition
+          hover:bg-red-50
           hover:text-red-600
         "
-        @click="
-          emit(
-            'reset'
-          )
-        "
+        @click="resetFilters"
       >
         Hapus semua filter
       </button>

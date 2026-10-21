@@ -27,6 +27,10 @@ import {
   getTriwulananSummary
 } from '../services/dashboardApi'
 
+import {
+  normalizeDisplayText
+} from '../utils/dashboardText.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -69,30 +73,6 @@ const summaryLoading = ref(false)
 const summaryError = ref('')
 
 let summaryRequestId = 0
-
-
-/*
-|--------------------------------------------------------------------------
-| NORMALISASI TEKS UI
-|--------------------------------------------------------------------------
-|
-| Ini hanya mengubah tulisan yang ditampilkan.
-| Value filter asli tetap dikirim ke backend.
-|
-*/
-
-function normalizeDisplayText(value) {
-  return String(value ?? '')
-    .replace(
-      /PENGG\s*2UNAAN/gi,
-      'PENGGUNAAN'
-    )
-    .replace(
-      /PENGGUNAAN\s*2/gi,
-      'PENGGUNAAN'
-    )
-    .trim()
-}
 
 
 /*
@@ -909,7 +889,71 @@ const klasifikasiSummary =
     )
   })
 
+/*
+|--------------------------------------------------------------------------
+| DESKRIPSI DASHBOARD
+|--------------------------------------------------------------------------
+*/
 
+const sektorSummary =
+  computed(() => {
+    const selected =
+      activeFilters.value.institusi || []
+
+    const sektorMap = {
+      FC: 'Korporasi Finansial',
+      NFC: 'Korporasi Nonfinansial',
+      HH: 'Rumah Tangga',
+      GG: 'Pemerintah Umum',
+      NPISHS: 'LNPRT',
+      ROW: 'Luar Negeri',
+      ODC: 'Lembaga Keuangan Lainnya'
+    }
+
+    // Default: 6 sektor utama
+    if (selected.length === 0) {
+      return [
+        'Korporasi Finansial',
+        'Korporasi Nonfinansial',
+        'Rumah Tangga',
+        'Pemerintah Umum',
+        'LNPRT',
+        'Luar Negeri'
+      ].join(', ')
+    }
+
+    return selected
+      .map(item => {
+        const kode =
+          String(item)
+            .trim()
+            .toUpperCase()
+
+        return (
+          sektorMap[kode] ||
+          normalizeDisplayText(item)
+        )
+      })
+      .join(', ')
+  })
+
+
+const dashboardTitle =
+  computed(() => {
+    return `Dashboard Neraca Sektoral — ${periodeLabel.value}`
+  })
+
+
+const dashboardDescription =
+  computed(() => {
+    return (
+      `Menampilkan data neraca sektoral untuk ` +
+      `${tahunLabel.value.toLowerCase()}, ` +
+      `${jenisSummary.value.toLowerCase()}, dan ` +
+      `${klasifikasiSummary.value.toLowerCase()}, ` +
+      `dengan cakupan sektor ${sektorSummary.value}.`
+    )
+  })
 /*
 |--------------------------------------------------------------------------
 | LABEL INSTITUSI
@@ -1306,197 +1350,46 @@ const jumlahBaris =
           xl:col-span-9
         "
       >
-        <!-- =================================================
-             ACTIVE FILTER SUMMARY
-        ================================================== -->
-        <div
-          class="
-            rounded-xl
-            border border-slate-200/80
-            bg-white
-            px-4
-            py-3
-            shadow-[0_1px_3px_rgba(15,23,42,0.03)]
-          "
-        >
-          <div
-            class="
-              flex
-              flex-col
-              gap-3
-              lg:flex-row
-              lg:items-center
-              lg:justify-between
-            "
-          >
-            <div class="min-w-0">
-              <p
-                class="
-                  text-[10px]
-                  font-bold
-                  uppercase
-                  tracking-[0.12em]
-                  text-slate-400
-                "
-              >
-                Filter Aktif
-              </p>
+<!-- =================================================
+     DASHBOARD DESCRIPTION
+================================================== -->
+<div
+  class="
+    rounded-xl
+    border border-slate-200/80
+    bg-white
+    px-5
+    py-4
+    shadow-[0_1px_3px_rgba(15,23,42,0.03)]
+  "
+>
+  <div class="min-w-0">
+    <!-- JUDUL -->
+    <h2
+      class="
+        text-base
+        font-bold
+        tracking-tight
+        text-slate-800
+      "
+    >
+      {{ dashboardTitle }}
+    </h2>
 
-
-              <div
-                class="
-                  mt-2
-                  flex
-                  flex-wrap
-                  items-center
-                  gap-1.5
-                "
-              >
-                <!-- PERIODE -->
-                <span
-                  class="
-                    rounded-md
-                    border border-blue-100
-                    bg-blue-50
-                    px-2
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    text-blue-700
-                  "
-                >
-                  {{ periodeLabel }}
-                </span>
-
-
-                <!-- TAHUN -->
-                <span
-                  class="
-                    rounded-md
-                    border border-slate-200
-                    bg-slate-50
-                    px-2
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    text-slate-600
-                  "
-                >
-                  {{ tahunLabel }}
-                </span>
-
-
-                <!-- TRIWULAN -->
-                <span
-                  v-if="
-                    triwulanLabel
-                  "
-                  class="
-                    rounded-md
-                    border border-slate-200
-                    bg-slate-50
-                    px-2
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    text-slate-600
-                  "
-                >
-                  {{ triwulanLabel }}
-                </span>
-
-
-                <!-- JENIS -->
-                <span
-                  class="
-                    rounded-md
-                    border border-slate-200
-                    bg-slate-50
-                    px-2
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    text-slate-600
-                  "
-                >
-                  {{ jenisSummary }}
-                </span>
-
-
-                <!-- NERACA -->
-                <span
-                  class="
-                    max-w-[240px]
-                    truncate
-                    rounded-md
-                    border border-slate-200
-                    bg-slate-50
-                    px-2
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    text-slate-600
-                  "
-                  :title="
-                    neracaSummary
-                  "
-                >
-                  {{ neracaSummary }}
-                </span>
-
-
-                <!-- KLASIFIKASI -->
-                <span
-                  class="
-                    max-w-[240px]
-                    truncate
-                    rounded-md
-                    border border-slate-200
-                    bg-slate-50
-                    px-2
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    text-slate-600
-                  "
-                  :title="
-                    klasifikasiSummary
-                  "
-                >
-                  {{
-                    klasifikasiSummary
-                  }}
-                </span>
-              </div>
-            </div>
-
-
-            <!-- STATUS -->
-            <div
-              class="
-                flex
-                shrink-0
-                items-center
-                gap-2
-                text-[10px]
-                font-medium
-                text-slate-400
-              "
-            >
-              <span
-                class="
-                  h-1.5
-                  w-1.5
-                  rounded-full
-                  bg-emerald-500
-                "
-              ></span>
-
-              Menampilkan data sesuai filter
-            </div>
-          </div>
-        </div>
-
+    <!-- DESKRIPSI -->
+    <p
+      class="
+        mt-1.5
+        max-w-5xl
+        text-xs
+        leading-5
+        text-slate-500
+      "
+    >
+      {{ dashboardDescription }}
+    </p>
+  </div>
+</div>
 
         <!-- =================================================
              TOP CONTENT

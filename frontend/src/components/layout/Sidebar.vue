@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   TableProperties,
   TrendingUp,
+  ChartNoAxesCombined,
   ChevronRight
 } from 'lucide-vue-next'
 
@@ -64,13 +65,6 @@ const menus = [
       LayoutDashboard
   },
 
-  {
-    name:
-      'Asset Data',
-
-    icon:
-      TableProperties
-  },
 
   {
     name:
@@ -78,6 +72,24 @@ const menus = [
 
     icon:
       TrendingUp
+  },
+
+
+  {
+    name:
+      'Analisis Rasio',
+
+    icon:
+      ChartNoAxesCombined
+  },
+
+
+  {
+    name:
+      'Database',
+
+    icon:
+      TableProperties
   }
 ]
 

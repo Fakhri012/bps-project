@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const dashboardRoutes = require('./routes/dashboardRoutes')
+const analisisRasioRoutes = require('./routes/analisisRasioRoutes')
 
 const app = express()
 
@@ -24,5 +25,8 @@ app.get('/api/health', (req, res) => {
 
 // Route dashboard
 app.use('/api/dashboard', dashboardRoutes)
+
+// Route analisis rasio
+app.use('/api/analisis-rasio', analisisRasioRoutes)
 
 module.exports = app

@@ -19,6 +19,10 @@ import {
   getTriwulananFilters
 } from '../../services/dashboardApi'
 
+import {
+  normalizeDisplayText
+} from '../../utils/dashboardText.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -51,8 +55,18 @@ const tahun = ref([])
 const triwulan = ref([])
 const neraca = ref([])
 const klasifikasi = ref([])
-const institusi = ref([])
+const defaultInstitusi = [
+  'FC',
+  'NFC',
+  'HH',
+  'GG',
+  'NPISHS',
+  'ROW'
+]
 
+const institusi = ref([
+  ...defaultInstitusi
+])
 
 /*
 |--------------------------------------------------------------------------
@@ -78,33 +92,6 @@ const loading = ref(false)
 const error = ref(null)
 
 let requestId = 0
-
-
-/*
-|--------------------------------------------------------------------------
-| NORMALISASI LABEL TAMPILAN
-|--------------------------------------------------------------------------
-|
-| Hanya memperbaiki teks yang tampil di UI.
-|
-| IMPORTANT:
-| value asli TIDAK diubah karena tetap digunakan
-| untuk request filter ke backend.
-|
-*/
-
-function normalizeDisplayText(value) {
-  return String(value ?? '')
-    .replace(
-      /PENGG\s*2UNAAN/gi,
-      'PENGGUNAAN'
-    )
-    .replace(
-      /PENGGUNAAN\s*2/gi,
-      'PENGGUNAAN'
-    )
-    .trim()
-}
 
 
 /*
@@ -649,8 +636,9 @@ function setPeriode(value) {
   triwulan.value = []
   neraca.value = []
   klasifikasi.value = []
-  institusi.value = []
-}
+institusi.value = [
+  ...defaultInstitusi
+]}
 
 
 /*
@@ -688,8 +676,9 @@ function resetFilter() {
   triwulan.value = []
   neraca.value = []
   klasifikasi.value = []
-  institusi.value = []
-}
+institusi.value = [
+  ...defaultInstitusi
+]}
 
 
 /*

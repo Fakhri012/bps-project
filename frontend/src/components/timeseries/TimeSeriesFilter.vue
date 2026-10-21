@@ -54,9 +54,21 @@ const neraca =
 const klasifikasi =
   ref([])
 
-const institusi =
-  ref([])
+const defaultInstitusi = [
+  'FC',
+  'NFC',
+  'HH',
+  'GG',
+  'NPISHS',
+  'ROW'
+]
 
+const institusi =
+  ref([
+    ...defaultInstitusi
+  ])
+
+  const isInitializing = ref(true)
 
 /*
 |--------------------------------------------------------------------------
@@ -116,6 +128,44 @@ const activeCount =
     )
   })
 
+const allFilters =
+  computed(() => ({
+    tahun:
+      tahunOptions.value.length === 0 ||
+      tahun.value.length === 0 ||
+      tahun.value.length >=
+        tahunOptions.value.length,
+
+    triwulan:
+      triwulanOptions.value.length === 0 ||
+      triwulan.value.length === 0 ||
+      triwulan.value.length >=
+        triwulanOptions.value.length,
+
+    sisi:
+      jenisOptions.value.length === 0 ||
+      jenis.value.length === 0 ||
+      jenis.value.length >=
+        jenisOptions.value.length,
+
+    neraca:
+      neracaOptions.value.length === 0 ||
+      neraca.value.length === 0 ||
+      neraca.value.length >=
+        neracaOptions.value.length,
+
+    klasifikasi:
+      klasifikasiOptions.value.length === 0 ||
+      klasifikasi.value.length === 0 ||
+      klasifikasi.value.length >=
+        klasifikasiOptions.value.length,
+
+    institusi:
+      institusiOptions.value.length === 0 ||
+      institusi.value.length === 0 ||
+      institusi.value.length >=
+        institusiOptions.value.length
+  }))
 
 /*
 |--------------------------------------------------------------------------
@@ -151,7 +201,11 @@ function getCurrentFilters() {
       [...klasifikasi.value],
 
     institusi:
-      [...institusi.value]
+      [...institusi.value],
+
+    allFilters: {
+      ...allFilters.value
+    }
   }
 }
 
@@ -631,7 +685,10 @@ function resetFilters() {
   jenis.value = []
   neraca.value = []
   klasifikasi.value = []
-  institusi.value = []
+
+  institusi.value = [
+    ...defaultInstitusi
+  ]
 }
 
 
@@ -652,19 +709,14 @@ watch(
   ],
 
   async () => {
-    /*
-     * Kirim filter ke TimeSeriesView.
-     */
+    if (isInitializing.value) {
+      return
+    }
 
     emit(
       'change',
       getCurrentFilters()
     )
-
-
-    /*
-     * Refresh cascading filter.
-     */
 
     await loadFilterOptions()
   },
@@ -676,15 +728,11 @@ watch(
 )
 
 
-/*
-|--------------------------------------------------------------------------
-| INIT
-|--------------------------------------------------------------------------
-*/
-
 onMounted(
   async () => {
     await loadFilterOptions()
+
+    isInitializing.value = false
 
     emit(
       'change',

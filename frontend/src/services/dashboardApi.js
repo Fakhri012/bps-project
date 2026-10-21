@@ -30,6 +30,16 @@ const api = axios.create({
   timeout: 30000
 })
 
+const analisisRasioApi = axios.create({
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL
+      ? import.meta.env.VITE_API_BASE_URL.replace(
+          /\/dashboard$/,
+          ''
+        )
+      : 'http://localhost:3001/api',
+  timeout: 30000
+})
 export default api
 
 
@@ -389,6 +399,23 @@ export async function getTriwulananTimeSeries(
         params:
           buildParams(filters)
       }
+    )
+
+  return response.data
+}
+
+
+
+/*
+|--------------------------------------------------------------------------
+| ANALISIS RASIO
+|--------------------------------------------------------------------------
+*/
+
+export async function getAnalisisRasio() {
+  const response =
+    await analisisRasioApi.get(
+      '/analisis-rasio'
     )
 
   return response.data

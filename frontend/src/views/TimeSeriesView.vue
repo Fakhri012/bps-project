@@ -597,6 +597,11 @@ async function loadTimeSeries(
 function handleFilterChange(
   filters = {}
 ) {
+
+  console.log(
+  '[TimeSeries] handleFilterChange:',
+  filters
+)
   activeFilters.value = {
     tahun:
       Array.isArray(
