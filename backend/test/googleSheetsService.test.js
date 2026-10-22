@@ -57,20 +57,20 @@ async function withMockedGoogleSheets(valuesByRange, callback) {
 
 test('maps pivot and ratio rows using their distinct required headers', async () => {
   const valuesByRange = {
-    "'Karakteristik & Pivot Tahunan'!E:L": [
+    "'Karakteristik & Pivot Tahunan'!E:M": [
       ['metadata'],
-      [' SEKTOR ', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI'],
-      ['FC', '2024', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas dan setara kas', '1.234,56'],
-      ['', '', '', '', '', '', '', ' '],
-      ['GG', '2023', 'PENGGUNAAN', 'KEWAJIBAN', 'K2', 'Utang', 'Utang lain', '']
+      [' SEKTOR ', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI', 'KONSEP'],
+      ['FC', '2024', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas dan setara kas', '1.234,56', 'Konsep kas'],
+      ['', '', '', '', '', '', '', ' ', ''],
+      ['GG', '2023', 'PENGGUNAAN', 'KEWAJIBAN', 'K2', 'Utang', 'Utang lain', '', 'Konsep utang']
     ],
-    "'Karakteristik & Pivot Triwulanan'!E:L": [
-      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI'],
-      ['FC', '2024/Q1', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas dan setara kas', '5']
+    "'Karakteristik & Pivot Triwulanan'!E:M": [
+      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI', 'KONSEP'],
+      ['FC', '2024/Q1', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas dan setara kas', '5', 'Konsep kas']
     ],
-    "'Karakteristik & Pivot Triwulan 2'!E:L": [
-      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI'],
-      ['NFC', '2024/Q2', 'PENGGUNAAN', 'ASET', 'K2', 'Mesin', 'Mesin dan peralatan', '6']
+    "'Karakteristik & Pivot Triwulan 2'!E:M": [
+      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI', 'KONSEP'],
+      ['NFC', '2024/Q2', 'PENGGUNAAN', 'ASET', 'K2', 'Mesin', 'Mesin dan peralatan', '6', 'Konsep mesin']
     ],
     "'Analisis Rasio'!E:J": [
       ['metadata'],
@@ -91,7 +91,8 @@ test('maps pivot and ratio rows using their distinct required headers', async ()
           KODE: 'K1',
           RINCIAN: 'Kas',
           'NERACA - RINCIAN': 'Kas dan setara kas',
-          NILAI: '1.234,56'
+          NILAI: '1.234,56',
+          KONSEP: 'Konsep kas'
         },
         {
           SEKTOR: 'GG',
@@ -101,7 +102,8 @@ test('maps pivot and ratio rows using their distinct required headers', async ()
           KODE: 'K2',
           RINCIAN: 'Utang',
           'NERACA - RINCIAN': 'Utang lain',
-          NILAI: ''
+          NILAI: '',
+          KONSEP: 'Konsep utang'
         }
       ]
     )
@@ -117,7 +119,8 @@ test('maps pivot and ratio rows using their distinct required headers', async ()
           KODE: 'K1',
           RINCIAN: 'Kas',
           'NERACA - RINCIAN': 'Kas dan setara kas',
-          NILAI: '5'
+          NILAI: '5',
+          KONSEP: 'Konsep kas'
         },
         {
           SEKTOR: 'NFC',
@@ -127,7 +130,8 @@ test('maps pivot and ratio rows using their distinct required headers', async ()
           KODE: 'K2',
           RINCIAN: 'Mesin',
           'NERACA - RINCIAN': 'Mesin dan peralatan',
-          NILAI: '6'
+          NILAI: '6',
+          KONSEP: 'Konsep mesin'
         }
       ]
     )
@@ -144,6 +148,31 @@ test('maps pivot and ratio rows using their distinct required headers', async ()
           NILAI: '1,25'
         }
       ]
+    )
+  })
+})
+
+test('reads pivot rows when the optional KONSEP header is absent', async () => {
+  const valuesByRange = {
+    "'Karakteristik & Pivot Tahunan'!E:M": [
+      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI'],
+      ['FC', '2024', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas dan setara kas', '5']
+    ]
+  }
+
+  await withMockedGoogleSheets(valuesByRange, async service => {
+    assert.deepEqual(
+      await service.getTahunanData(),
+      [{
+        SEKTOR: 'FC',
+        TAHUN: '2024',
+        SISI: 'SUMBER',
+        'JENIS NERACA': 'ASET',
+        KODE: 'K1',
+        RINCIAN: 'Kas',
+        'NERACA - RINCIAN': 'Kas dan setara kas',
+        NILAI: '5'
+      }]
     )
   })
 })
@@ -168,7 +197,7 @@ test('preserves each sheet required headers and missing-header errors', async ()
   })
 
   await withMockedGoogleSheets({
-    "'Karakteristik & Pivot Tahunan'!E:L": [
+    "'Karakteristik & Pivot Tahunan'!E:M": [
       ['SEKTOR', 'TAHUN', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NILAI']
     ]
   }, async service => {

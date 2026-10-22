@@ -29,6 +29,10 @@ const {
   DASHBOARD_VALUE_UNIT
 } = require('../config/dashboardUnits')
 
+const {
+  sendInternalServerError
+} = require('../utils/httpErrors')
+
 
 async function getTriwulananSummary(
   req,
@@ -79,20 +83,12 @@ res.json({
   summary
 })
   } catch (error) {
-    console.error(
-      'Summary Triwulanan Error:',
+    return sendInternalServerError(
+      res,
+      'Summary triwulanan',
+      'Gagal menghitung summary triwulanan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal menghitung summary triwulanan',
-
-      error:
-        error.message
-    })
   }
 }
 /*
@@ -126,20 +122,12 @@ res.json({
   data: data.slice(0, 20)
 })
   } catch (error) {
-    console.error(
-      'Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Preview tahunan',
+      'Gagal membaca data tahunan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal membaca data tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -164,20 +152,12 @@ res.json({
   data: data.slice(0, 20)
 })
   } catch (error) {
-    console.error(
-      'Triwulanan Error:',
+    return sendInternalServerError(
+      res,
+      'Preview triwulanan',
+      'Gagal membaca data triwulanan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal membaca data triwulanan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1392,20 +1372,12 @@ async function getTahunanAsset(
     )
 
   } catch (error) {
-    console.error(
-      'Asset Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Asset tahunan',
+      'Gagal mengambil data Asset Tahunan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil data Asset Tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1443,20 +1415,12 @@ async function getTriwulananAsset(
     )
 
   } catch (error) {
-    console.error(
-      'Asset Triwulanan Error:',
+    return sendInternalServerError(
+      res,
+      'Asset triwulanan',
+      'Gagal mengambil data Asset Triwulanan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil data Asset Triwulanan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1522,21 +1486,12 @@ async function getTahunanAssetFilters(
     })
 
   } catch (error) {
-    console.error(
-      'Filter Asset Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Filter Asset tahunan',
+      'Gagal mengambil filter Asset Tahunan',
       error
     )
-
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil filter Asset Tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1604,21 +1559,12 @@ async function getTriwulananAssetFilters(
     })
 
   } catch (error) {
-    console.error(
-      'Filter Asset Triwulanan Error:',
+    return sendInternalServerError(
+      res,
+      'Filter Asset triwulanan',
+      'Gagal mengambil filter Asset Triwulanan',
       error
     )
-
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil filter Asset Triwulanan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1709,21 +1655,12 @@ res.json({
 })
 
   } catch (error) {
-    console.error(
-      'Time Series Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Time Series tahunan',
+      'Gagal mengambil Time Series Tahunan',
       error
     )
-
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil Time Series Tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1813,23 +1750,161 @@ res.json({
 })
 
   } catch (error) {
-    console.error(
-      'Time Series Triwulanan Error:',
+    return sendInternalServerError(
+      res,
+      'Time Series triwulanan',
+      'Gagal mengambil Time Series Triwulanan',
       error
     )
-
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil Time Series Triwulanan',
-
-      error:
-        error.message
-    })
   }
 }
+
+function getLandingNationalIndicators(data, latestPeriod) {
+  if (!latestPeriod) {
+    return []
+  }
+
+  const grouped = new Map()
+
+  data.forEach(item => {
+    const year = Number(item.tahun)
+    const quarter = Number(item.triwulan)
+    const sector = String(item.sektor ?? '').trim()
+    const classification = String(item.rincian ?? '').trim()
+
+    if (
+      sector !== 'TOTAL EKN' ||
+      !classification ||
+      year !== latestPeriod.year ||
+      (latestPeriod.frequency === 'tahunan' && !Number.isInteger(year)) ||
+      (
+        latestPeriod.frequency === 'triwulanan' &&
+        (
+          !Number.isInteger(quarter) ||
+          quarter < 1 ||
+          quarter > 4 ||
+          quarter !== latestPeriod.quarter
+        )
+      ) ||
+      item.nilai === null ||
+      item.nilai === undefined ||
+      (typeof item.nilai === 'string' && item.nilai.trim() === '')
+    ) {
+      return
+    }
+
+    const value = Number(item.nilai)
+
+    if (!Number.isFinite(value)) {
+      return
+    }
+
+    grouped.set(
+      classification,
+      (grouped.get(classification) || 0) + value
+    )
+  })
+
+  return Array.from(grouped, ([klasifikasi, nilai]) => ({
+    klasifikasi,
+    nilai
+  })).sort((first, second) =>
+    first.klasifikasi.localeCompare(
+      second.klasifikasi,
+      'id',
+      { numeric: true, sensitivity: 'base' }
+    )
+  )
+}
+
+async function getLandingOverview(
+  req,
+  res
+) {
+  try {
+    const [annualData, quarterlyData] = await Promise.all([
+      getCachedTahunanData(),
+      getCachedTriwulananData()
+    ])
+
+    let latestAnnualYear = null
+
+    annualData.forEach(item => {
+      const year = Number(item.tahun)
+
+      if (
+        Number.isInteger(year) &&
+        (latestAnnualYear === null || year > latestAnnualYear)
+      ) {
+        latestAnnualYear = year
+      }
+    })
+
+    const latestQuarter = quarterlyData.reduce((latest, item) => {
+      const year = Number(item.tahun)
+      const quarter = Number(item.triwulan)
+
+      if (
+        !Number.isInteger(year) ||
+        !Number.isInteger(quarter) ||
+        quarter < 1 ||
+        quarter > 4
+      ) {
+        return latest
+      }
+
+      return !latest || year * 10 + quarter > latest.year * 10 + latest.quarter
+        ? { year, quarter }
+        : latest
+    }, null)
+
+    const latestPeriod = latestQuarter && (
+      latestAnnualYear === null ||
+      latestQuarter.year >= latestAnnualYear
+    )
+      ? {
+          frequency: 'triwulanan',
+          year: latestQuarter.year,
+          quarter: latestQuarter.quarter,
+          label: `${latestQuarter.year}/Q${latestQuarter.quarter}`
+        }
+      : latestAnnualYear !== null
+        ? {
+            frequency: 'tahunan',
+            year: latestAnnualYear,
+            quarter: null,
+            label: String(latestAnnualYear)
+          }
+        : null
+
+    const indicatorData = latestPeriod?.frequency === 'triwulanan'
+      ? quarterlyData
+      : annualData
+    const nationalIndicators = getLandingNationalIndicators(
+      indicatorData,
+      latestPeriod
+    )
+
+    res.json({
+      success: true,
+      unit: DASHBOARD_VALUE_UNIT,
+      latestPeriod,
+      nationalIndicators: {
+        sector: 'TOTAL EKN',
+        period: latestPeriod?.label || null,
+        values: nationalIndicators
+      }
+    })
+  } catch (error) {
+    return sendInternalServerError(
+      res,
+      'Landing overview',
+      'Gagal mengambil ringkasan landing statistik',
+      error
+    )
+  }
+}
+
 
 async function getTahunanInstitusi(
   req,
@@ -1856,20 +1931,12 @@ async function getTahunanInstitusi(
       institusi
     })
   } catch (error) {
-    console.error(
-      'Institusi Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Institusi tahunan',
+      'Gagal mengambil daftar institusi tahunan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil daftar institusi tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1914,20 +1981,12 @@ async function getTahunanFilters(
       filters
     })
   } catch (error) {
-    console.error(
-      'Filter Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Filter tahunan',
+      'Gagal mengambil filter tahunan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil filter tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -1976,20 +2035,12 @@ res.json({
   summary
 })
   } catch (error) {
-    console.error(
-      'Summary Tahunan Error:',
+    return sendInternalServerError(
+      res,
+      'Summary tahunan',
+      'Gagal menghitung summary tahunan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal menghitung summary tahunan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -2037,20 +2088,12 @@ async function getTriwulananFilters(
       filters
     })
   } catch (error) {
-    console.error(
-      'Filter Triwulanan Error:',
+    return sendInternalServerError(
+      res,
+      'Filter triwulanan',
+      'Gagal mengambil filter triwulanan',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil filter triwulanan',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -2074,20 +2117,12 @@ function getCacheInfo(
       }
     })
   } catch (error) {
-    console.error(
-      'Cache Info Error:',
+    return sendInternalServerError(
+      res,
+      'Cache info',
+      'Gagal mengambil informasi cache',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal mengambil informasi cache',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -2133,20 +2168,12 @@ async function refreshCache(
       }
     })
   } catch (error) {
-    console.error(
-      'Refresh Cache Error:',
+    return sendInternalServerError(
+      res,
+      'Refresh cache',
+      'Gagal memperbarui cache',
       error
     )
-
-    res.status(500).json({
-      success: false,
-
-      message:
-        'Gagal memperbarui cache',
-
-      error:
-        error.message
-    })
   }
 }
 
@@ -2196,6 +2223,8 @@ getTriwulananAssetFilters,
 
   getTahunanSummary,
   getTriwulananSummary,
+  getLandingOverview,
+  getLandingNationalIndicators,
 
 
 /*

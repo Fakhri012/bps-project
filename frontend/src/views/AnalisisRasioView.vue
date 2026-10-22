@@ -7,6 +7,18 @@ import {
 } from 'vue'
 
 import VChart from 'vue-echarts'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Search,
+  RotateCcw,
+  SlidersHorizontal,
+  BookOpen,
+  X
+} from 'lucide-vue-next'
+import MultiSelectFilter
+  from '../components/dashboard/MultiSelectFilter.vue'
 
 import { use } from 'echarts/core'
 
@@ -48,7 +60,6 @@ const loading = ref(false)
 
 const error = ref('')
 
-
 /*
 |--------------------------------------------------------------------------
 | FILTER
@@ -59,9 +70,17 @@ const selectedSektor = ref([])
 
 const isSektorOpen = ref(false)
 
-const selectedPeriode = ref('')
+const selectedPeriode = ref([])
 
-const selectedJenisRasio = ref('')
+const selectedJenisRasio = ref([])
+
+const ratioChartModes = ref({})
+
+const activeFilterCount = computed(() =>
+  selectedSektor.value.length +
+  selectedPeriode.value.length +
+  selectedJenisRasio.value.length
+)
 
 
 /*
@@ -72,7 +91,13 @@ const selectedJenisRasio = ref('')
 
 const currentPage = ref(1)
 
-const itemsPerPage = 10
+const tableSearch = ref('')
+
+const itemsPerPage = ref(10)
+
+const tableSortKey = ref('periode')
+
+const tableSortDirection = ref('asc')
 
 
 /*
@@ -148,15 +173,6 @@ async function loadData() {
 |--------------------------------------------------------------------------
 */
 
-function resetSektor() {
-
-  selectedSektor.value = []
-
-  resetPage()
-
-}
-
-
 /*
 |--------------------------------------------------------------------------
 | HELPER
@@ -174,6 +190,58 @@ function isQuarterly(periode) {
 function isAnnual(periode) {
 
   return !isQuarterly(periode)
+
+}
+
+
+function normalizeRatioSektor(value) {
+
+  const sektor = String(value ?? '').trim().toUpperCase()
+
+
+  if (/^NFC(?:\s+\d+)?$/.test(sektor)) {
+
+    return 'NFC'
+
+  }
+
+
+  if (/^NFC PRIVATE(?:\s+\d+)?$/.test(sektor)) {
+
+    return 'NFC PRIVATE'
+
+  }
+
+
+  if (/^NFC PUBLIC(?:\s+\d+)?$/.test(sektor)) {
+
+    return 'NFC PUBLIC'
+
+  }
+
+
+  return sektor.replace(/\s+\d+$/, '').trim()
+
+}
+
+
+const sectorDisplayNames = {
+  FC: 'Korporasi Finansial',
+  NFC: 'Korporasi Nonfinansial',
+  HH: 'Rumah Tangga',
+  GG: 'Pemerintah Umum',
+  NPISHS: 'Lembaga Non-Profit',
+  ROW: 'Luar Negeri',
+  'TOTAL EKN': 'Total Perekonomian',
+  TOTAL: 'Total',
+  CB: 'Bank Sentral',
+  ODC: 'Lembaga Keuangan Lainnya'
+}
+
+
+function getSectorName(sektor) {
+
+  return sectorDisplayNames[sektor] || sektor
 
 }
 
@@ -227,44 +295,42 @@ function numericValue(value) {
 
   }
 
-  const parsed =
-    Number(
-      String(value)
-        .trim()
-        .replace(/\./g, '')
-        .replace(',', '.')
-    )
+
+  if (typeof value === 'number') {
+
+    return Number.isFinite(value)
+      ? value
+      : null
+
+  }
+
+  const normalized = String(value).trim()
+  const lastComma = normalized.lastIndexOf(',')
+  const lastPeriod = normalized.lastIndexOf('.')
+  let numericText = normalized
+
+
+  if (lastComma >= 0 && lastPeriod >= 0) {
+
+    const decimalSeparator = lastComma > lastPeriod ? ',' : '.'
+    const groupingSeparator = decimalSeparator === ',' ? '.' : ','
+
+    numericText = normalized
+      .replaceAll(groupingSeparator, '')
+      .replace(decimalSeparator, '.')
+
+  } else if (lastComma >= 0) {
+
+    numericText = normalized.replace(',', '.')
+
+  }
+
+
+  const parsed = Number(numericText)
 
   return Number.isFinite(parsed)
     ? parsed
     : null
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMAT NUMBER
-|--------------------------------------------------------------------------
-|
-| Untuk hasil agregasi.
-|
-*/
-
-function formatAggregatedValue(value) {
-
-  if (
-    value === null ||
-    value === undefined ||
-    !Number.isFinite(value)
-  ) {
-
-    return '-'
-
-  }
-
-  return String(value)
-    .replace('.', ',')
 
 }
 
@@ -281,10 +347,7 @@ const sektorOptions = computed(() => {
     ...new Set(
       data.value
         .map(
-          item =>
-            String(
-              item.SEKTOR ?? ''
-            ).trim()
+          item => normalizeRatioSektor(item.SEKTOR)
         )
         .filter(Boolean)
     )
@@ -346,6 +409,13 @@ const jenisRasioOptions = computed(() => {
 })
 
 
+const displayedRatioTypes = computed(() =>
+  selectedJenisRasio.value.length > 0
+    ? selectedJenisRasio.value
+    : jenisRasioOptions.value
+)
+
+
 /*
 |--------------------------------------------------------------------------
 | FILTER DATA MENTAH
@@ -362,10 +432,7 @@ const filteredData = computed(() => {
 
   return data.value.filter(item => {
 
-    const sektor =
-      String(
-        item.SEKTOR ?? ''
-      ).trim()
+    const sektor = normalizeRatioSektor(item.SEKTOR)
 
 
     /*
@@ -381,15 +448,13 @@ const filteredData = computed(() => {
 
 
     const matchPeriode =
-      !selectedPeriode.value ||
-      String(item.TAHUN) ===
-        String(selectedPeriode.value)
+      selectedPeriode.value.length === 0 ||
+      selectedPeriode.value.includes(String(item.TAHUN))
 
 
     const matchJenisRasio =
-      !selectedJenisRasio.value ||
-      item['JENIS RASIO'] ===
-        selectedJenisRasio.value
+      selectedJenisRasio.value.length === 0 ||
+      selectedJenisRasio.value.includes(item['JENIS RASIO'])
 
 
     return (
@@ -423,98 +488,15 @@ const filteredData = computed(() => {
 |
 */
 
-const aggregatedData = computed(() => {
-
-  const map = new Map()
-
-
-  filteredData.value.forEach(item => {
-
-    const periode =
-      item.TAHUN
-
-    const jenis =
-      item['JENIS RASIO']
-
-
-    if (
-      !periode ||
-      !jenis
-    ) {
-
-      return
-
-    }
-
-
-    const key =
-      `${periode}__${jenis}`
-
-
-    if (!map.has(key)) {
-
-      map.set(
-        key,
-        {
-          ...item,
-          NILAI: 0,
-          _numericValue: 0,
-          _hasNumericValue: false
-        }
-      )
-
-    }
-
-
-    const row =
-      map.get(key)
-
-
-    const numeric =
-      numericValue(
-        item.NILAI
-      )
-
-
-    if (
-      numeric !== null
-    ) {
-
-      row._numericValue += numeric
-
-      row._hasNumericValue = true
-
-    }
-
-  })
-
-
-  return Array
-    .from(map.values())
-    .map(item => ({
-
-      ...item,
-
-      NILAI:
-        item._hasNumericValue
-          ? formatAggregatedValue(
-              item._numericValue
-            )
-          : '-'
-
-    }))
-    .sort(
-      (a, b) =>
-        String(a.TAHUN).localeCompare(
-          String(b.TAHUN),
-          undefined,
-          {
-            numeric: true
-          }
-        )
+const sortedData = computed(() =>
+  [...filteredData.value].sort((first, second) =>
+    String(first.TAHUN).localeCompare(
+      String(second.TAHUN),
+      undefined,
+      { numeric: true }
     )
-
-})
+  )
+)
 
 
 /*
@@ -525,7 +507,7 @@ const aggregatedData = computed(() => {
 
 const annualData = computed(() => {
 
-  return aggregatedData.value.filter(
+  return sortedData.value.filter(
     item =>
       isAnnual(item.TAHUN)
   )
@@ -541,7 +523,7 @@ const annualData = computed(() => {
 
 const quarterlyData = computed(() => {
 
-  return aggregatedData.value.filter(
+  return sortedData.value.filter(
     item =>
       isQuarterly(item.TAHUN)
   )
@@ -558,26 +540,41 @@ const quarterlyData = computed(() => {
 const statisticTable = computed(() => {
 
   const map = new Map()
+  const canonicalRows = new Map()
 
 
-  aggregatedData.value.forEach(item => {
+  sortedData.value.forEach(item => {
 
     const periode =
       item.TAHUN
 
+    const sektor =
+      normalizeRatioSektor(item.SEKTOR)
 
-    if (!map.has(periode)) {
+    const jenis =
+      item['JENIS RASIO']
+
+
+    if (!periode || !sektor || !jenis) {
+
+      return
+
+    }
+
+
+    const key =
+      `${periode}__${sektor}`
+
+
+    if (!map.has(key)) {
 
       map.set(
-        periode,
+        key,
         {
+          key,
           periode,
-
-          'COE/VA': '-',
-
-          'PMTB/DI': '-',
-
-          'IA/Output': '-'
+          sektor,
+          values: {}
         }
       )
 
@@ -585,24 +582,18 @@ const statisticTable = computed(() => {
 
 
     const row =
-      map.get(periode)
+      map.get(key)
 
 
-    const jenis =
-      item['JENIS RASIO']
+    const canonicalKey = `${key}__${jenis}`
+    const isCanonicalSector =
+      String(item.SEKTOR ?? '').trim().toUpperCase() === sektor
 
 
-    if (
-      Object.prototype.hasOwnProperty.call(
-        row,
-        jenis
-      )
-    ) {
+    if (!canonicalRows.get(canonicalKey) || isCanonicalSector) {
 
-      row[jenis] =
-        rawValue(
-          item.NILAI
-        )
+      row.values[jenis] = rawValue(item.NILAI)
+      canonicalRows.set(canonicalKey, isCanonicalSector)
 
     }
 
@@ -612,17 +603,289 @@ const statisticTable = computed(() => {
   return Array
     .from(map.values())
     .sort(
-      (a, b) =>
-        String(a.periode).localeCompare(
-          String(b.periode),
+      (a, b) => {
+        const periodOrder =
+          String(a.periode).localeCompare(
+            String(b.periode),
           undefined,
           {
             numeric: true
           }
         )
+
+        return periodOrder ||
+          a.sektor.localeCompare(b.sektor)
+      }
     )
 
 })
+
+
+function getPeriodRange(periods) {
+
+  const ordered = [...new Set(periods)].sort((first, second) =>
+    String(first).localeCompare(String(second), undefined, { numeric: true })
+  )
+
+
+  if (ordered.length === 0) {
+
+    return '-'
+
+  }
+
+
+  if (ordered.length === 1) {
+
+    return ordered[0]
+
+  }
+
+
+  return `${ordered[0]} - ${ordered[ordered.length - 1]}`
+
+}
+
+
+const summaryMetrics = computed(() => {
+
+  const rows = filteredData.value
+  const annualPeriods = rows
+    .filter(item => isAnnual(item.TAHUN))
+    .map(item => item.TAHUN)
+  const quarterlyPeriods = rows
+    .filter(item => isQuarterly(item.TAHUN))
+    .map(item => item.TAHUN)
+  const sectors = new Set(
+    rows.map(item => normalizeRatioSektor(item.SEKTOR)).filter(Boolean)
+  )
+
+
+  return {
+    observations: rows.length,
+    sectors: sectors.size,
+    annualPeriodCount: new Set(annualPeriods).size,
+    quarterlyPeriodCount: new Set(quarterlyPeriods).size,
+    annualCoverage: getPeriodRange(annualPeriods),
+    quarterlyCoverage: getPeriodRange(quarterlyPeriods)
+  }
+
+})
+
+
+const tableRatioTypes = computed(() => {
+
+  const query = tableSearch.value.trim().toLocaleLowerCase('id-ID')
+  const matchingRatios = displayedRatioTypes.value.filter(ratio =>
+    ratio.toLocaleLowerCase('id-ID').includes(query)
+  )
+
+
+  return query && matchingRatios.length > 0
+    ? matchingRatios
+    : displayedRatioTypes.value
+
+})
+
+
+const searchedTable = computed(() => {
+
+  const query = tableSearch.value.trim().toLocaleLowerCase('id-ID')
+
+
+  if (!query) {
+
+    return statisticTable.value
+
+  }
+
+
+  if (tableRatioTypes.value.length < displayedRatioTypes.value.length) {
+
+    return statisticTable.value
+
+  }
+
+
+  return statisticTable.value.filter(row => {
+    const searchableValues = [
+      row.periode,
+      row.periode.includes('/Q') ? 'triwulan' : 'tahunan',
+      row.sektor,
+      ...displayedRatioTypes.value.map(ratio => row.values[ratio])
+    ]
+
+    return searchableValues
+      .join(' ')
+      .toLocaleLowerCase('id-ID')
+      .includes(query)
+  })
+
+})
+
+
+function getTableSortValue(row, key) {
+
+  if (key.startsWith('ratio:')) {
+
+    return numericValue(row.values[key.slice(6)])
+
+  }
+
+
+  if (key === 'sektor') {
+
+    return getSectorName(row.sektor)
+
+  }
+
+
+  return row.periode
+
+}
+
+
+const sortedTable = computed(() => {
+
+  return [...searchedTable.value].sort((first, second) => {
+    const firstValue = getTableSortValue(first, tableSortKey.value)
+    const secondValue = getTableSortValue(second, tableSortKey.value)
+    let comparison = 0
+
+
+    if (firstValue === null || firstValue === undefined) {
+
+      return secondValue === null || secondValue === undefined ? 0 : 1
+
+    }
+
+
+    if (secondValue === null || secondValue === undefined) {
+
+      return -1
+
+    }
+
+
+    if (typeof firstValue === 'number' && typeof secondValue === 'number') {
+
+      comparison = firstValue - secondValue
+
+    } else {
+
+      comparison = String(firstValue).localeCompare(
+        String(secondValue),
+        'id',
+        { numeric: true, sensitivity: 'base' }
+      )
+
+    }
+
+
+    if (comparison === 0) {
+
+      comparison = String(first.periode).localeCompare(
+        String(second.periode),
+        undefined,
+        { numeric: true }
+      ) || first.sektor.localeCompare(second.sektor)
+
+    }
+
+
+    return tableSortDirection.value === 'asc'
+      ? comparison
+      : -comparison
+  })
+
+})
+
+
+const pageNumbers = computed(() => {
+
+  const total = totalPages.value
+
+
+  if (sortedTable.value.length === 0) {
+
+    return []
+
+  }
+
+
+  if (total <= 5) {
+
+    return Array.from({ length: total }, (_, index) => index + 1)
+
+  }
+
+
+  if (currentPage.value <= 3) {
+
+    return [1, 2, 3, '...', total]
+
+  }
+
+
+  if (currentPage.value >= total - 2) {
+
+    return [1, '...', total - 2, total - 1, total]
+
+  }
+
+
+  return [1, '...', currentPage.value - 1, currentPage.value, currentPage.value + 1, '...', total]
+
+})
+
+
+const pageRangeStart = computed(() =>
+  sortedTable.value.length === 0
+    ? 0
+    : (currentPage.value - 1) * itemsPerPage.value + 1
+)
+
+
+const pageRangeEnd = computed(() =>
+  Math.min(currentPage.value * itemsPerPage.value, sortedTable.value.length)
+)
+
+
+function toggleTableSort(key) {
+
+  if (tableSortKey.value === key) {
+
+    tableSortDirection.value = tableSortDirection.value === 'asc'
+      ? 'desc'
+      : 'asc'
+
+  } else {
+
+    tableSortKey.value = key
+    tableSortDirection.value = 'asc'
+
+  }
+
+
+  currentPage.value = 1
+
+}
+
+
+function getTableSortIcon(key) {
+
+  if (tableSortKey.value !== key) {
+
+    return ArrowUpDown
+
+  }
+
+
+  return tableSortDirection.value === 'asc'
+    ? ArrowUp
+    : ArrowDown
+
+}
 
 
 /*
@@ -636,8 +899,8 @@ const totalPages = computed(() => {
   return Math.max(
     1,
     Math.ceil(
-      statisticTable.value.length /
-      itemsPerPage
+      sortedTable.value.length /
+      itemsPerPage.value
     )
   )
 
@@ -650,12 +913,12 @@ const paginatedTable = computed(() => {
     (
       currentPage.value - 1
     ) *
-    itemsPerPage
+    itemsPerPage.value
 
 
-  return statisticTable.value.slice(
+  return sortedTable.value.slice(
     start,
-    start + itemsPerPage
+    start + itemsPerPage.value
   )
 
 })
@@ -697,81 +960,20 @@ function resetFilters() {
 
   selectedSektor.value = []
 
-  selectedPeriode.value = ''
+  selectedPeriode.value = []
 
-  selectedJenisRasio.value = ''
+  selectedJenisRasio.value = []
 
   resetPage()
 
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| KPI
-|--------------------------------------------------------------------------
-*/
+function resetSektor() {
 
-function getLatestRatio(ratio) {
+  selectedSektor.value = []
 
-  const rows =
-    aggregatedData.value
-      .filter(
-        item =>
-          item['JENIS RASIO'] ===
-          ratio
-      )
-      .sort(
-        (a, b) =>
-          String(a.TAHUN).localeCompare(
-            String(b.TAHUN),
-            undefined,
-            {
-              numeric: true
-            }
-          )
-      )
-
-
-  if (
-    rows.length === 0
-  ) {
-
-    return '-'
-
-  }
-
-
-  return rawValue(
-    rows[
-      rows.length - 1
-    ].NILAI
-  )
-
-}
-
-
-function getLatestPeriod() {
-
-  const periods =
-    statisticTable.value.map(
-      item =>
-        item.periode
-    )
-
-
-  if (
-    periods.length === 0
-  ) {
-
-    return '-'
-
-  }
-
-
-  return periods[
-    periods.length - 1
-  ]
+  resetPage()
 
 }
 
@@ -782,30 +984,38 @@ function getLatestPeriod() {
 |--------------------------------------------------------------------------
 */
 
-function buildChartRows(sourceData) {
+function buildChartRows(sourceData, ratio) {
 
   const map = new Map()
+  const sectors = new Set()
 
 
   sourceData.forEach(item => {
 
-    const periode =
-      item.TAHUN
+    if (item['JENIS RASIO'] !== ratio) {
+
+      return
+
+    }
+
+
+    const periode = String(item.TAHUN ?? '').trim()
+    const rawSektor = String(item.SEKTOR ?? '').trim().toUpperCase()
+    const sektor = normalizeRatioSektor(item.SEKTOR)
+
+
+    if (!periode || !sektor) {
+
+      return
+
+    }
 
 
     if (!map.has(periode)) {
 
       map.set(
         periode,
-        {
-          periode,
-
-          'COE/VA': null,
-
-          'PMTB/DI': null,
-
-          'IA/Output': null
-        }
+        { periode }
       )
 
     }
@@ -815,33 +1025,25 @@ function buildChartRows(sourceData) {
       map.get(periode)
 
 
-    const jenis =
-      item['JENIS RASIO']
+    const isCanonicalSector = rawSektor === sektor
+    const hasCanonicalValue = row[`_${sektor}Canonical`]
 
+    if (!hasCanonicalValue || isCanonicalSector) {
 
-    const numeric =
-      numericValue(
-        item.NILAI
-      )
-
-
-    if (
-      ratioTypes.includes(jenis)
-    ) {
-
-      row[jenis] =
-        numeric !== null
-          ? numeric
-          : null
+      row[sektor] = numericValue(item.NILAI)
+      row[`_${sektor}Canonical`] = isCanonicalSector
 
     }
+
+    sectors.add(sektor)
 
   })
 
 
-  return Array
-    .from(map.values())
-    .sort(
+  return {
+    rows: Array
+      .from(map.values())
+      .sort(
       (a, b) =>
         String(a.periode).localeCompare(
           String(b.periode),
@@ -850,7 +1052,9 @@ function buildChartRows(sourceData) {
             numeric: true
           }
         )
-    )
+      ),
+    sectors: Array.from(sectors)
+  }
 
 }
 
@@ -1291,6 +1495,217 @@ const quarterlyChartOption =
   })
 
 
+const sectorColors = {
+  FC: '#2563eb',
+  NFC: '#e76f51',
+  HH: '#16a34a',
+  GG: '#d4a72c',
+  NPISHS: '#7c3aed',
+  ROW: '#0891b2'
+}
+
+
+function createChartOption(chartData, isQuarterly) {
+  return {
+    animationDuration: 650,
+    animationEasing: 'cubicOut',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(15, 23, 42, 0.96)',
+      borderWidth: 0,
+      padding: [10, 12],
+      textStyle: {
+        color: '#ffffff',
+        fontSize: 11
+      },
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: '#94a3b8',
+          type: 'dashed'
+        }
+      },
+      formatter(parameters) {
+        if (!parameters?.length) {
+          return ''
+        }
+
+        let html = `<div style="font-weight:700;margin-bottom:8px;color:#f8fafc">${parameters[0].axisValue}</div>`
+
+        parameters.forEach(parameter => {
+          if (parameter.value === null || parameter.value === undefined) {
+            return
+          }
+
+          html += `<div style="display:flex;gap:18px;justify-content:space-between;margin-top:4px"><span style="color:#cbd5e1">${parameter.marker}${parameter.seriesName}</span><strong style="color:#ffffff">${formatChartValue(parameter.value)}</strong></div>`
+        })
+
+        return html
+      }
+    },
+    legend: {
+      top: 4,
+      left: 58,
+      right: 16,
+      type: 'scroll',
+      icon: 'circle',
+      itemWidth: 12,
+      itemHeight: 9,
+      textStyle: {
+        color: '#475569',
+        fontSize: 11
+      }
+    },
+    grid: {
+      top: 50,
+      right: 26,
+      bottom: isQuarterly ? 96 : 58,
+      left: 58,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.rows.map(row => row.periode),
+      boundaryGap: false,
+      axisLine: {
+        lineStyle: {
+          color: '#dbe4ec'
+        }
+      },
+      axisTick: {
+        show: false
+      },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: isQuarterly ? 9 : 11,
+        margin: 12,
+        hideOverlap: true,
+        rotate: isQuarterly && chartData.rows.length > 14 ? 35 : 0
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        show: false
+      },
+      axisTick: {
+        show: false
+      },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: 10,
+        formatter: value => formatChartValue(value)
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#e8edf3'
+        }
+      }
+    },
+    dataZoom: isQuarterly
+      ? [
+          {
+            type: 'inside',
+            start: 0,
+            end: 35,
+            zoomOnMouseWheel: true,
+            moveOnMouseMove: true,
+            moveOnMouseWheel: false
+          },
+          {
+            type: 'slider',
+            height: 16,
+            bottom: 8,
+            start: 0,
+            end: 35,
+            borderColor: '#dbe4ec',
+            backgroundColor: '#f1f5f9',
+            fillerColor: 'rgba(15, 118, 110, 0.10)',
+            handleStyle: {
+              color: '#0f766e'
+            },
+            textStyle: {
+              color: '#64748b',
+              fontSize: 9
+            }
+          }
+        ]
+      : undefined,
+    series: chartData.sectors.map(sector => ({
+      name: sector,
+      type: 'line',
+      smooth: 0.25,
+      symbol: 'circle',
+      symbolSize: isQuarterly ? 5 : 7,
+      connectNulls: false,
+      itemStyle: {
+        color: '#ffffff',
+        borderColor: sectorColors[sector] || '#64748b',
+        borderWidth: 2
+      },
+      lineStyle: {
+        width: 3,
+        color: sectorColors[sector] || '#64748b'
+      },
+      emphasis: {
+        focus: 'series',
+        lineStyle: {
+          width: 4
+        },
+        itemStyle: {
+          color: sectorColors[sector] || '#64748b',
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          shadowBlur: 8
+        }
+      },
+      data: chartData.rows.map(row => row[sector] ?? null)
+    }))
+  }
+}
+
+
+function setRatioChartMode(ratio, mode) {
+
+  ratioChartModes.value = {
+    ...ratioChartModes.value,
+    [ratio]: mode
+  }
+
+}
+
+
+const charts = computed(() => {
+
+  const activeRatios = selectedJenisRasio.value.length > 0
+    ? selectedJenisRasio.value
+    : jenisRasioOptions.value
+
+
+  return activeRatios.map(ratio => {
+    const periodLabel = ratioChartModes.value[ratio] || 'Tahunan'
+    const quarterly = periodLabel === 'Triwulanan'
+    const chartData = buildChartRows(
+      quarterly ? quarterlyData.value : annualData.value,
+      ratio
+    )
+    const hasData = chartData.rows.some(row =>
+      chartData.sectors.some(sector => row[sector] !== null)
+    )
+
+    return {
+      key: ratio,
+      ratio,
+      periodLabel,
+      chartData,
+      hasData,
+      option: createChartOption(chartData, quarterly)
+    }
+  })
+
+})
+
+
 /*
 |--------------------------------------------------------------------------
 | WATCH
@@ -1301,7 +1716,9 @@ watch(
   [
     selectedSektor,
     selectedPeriode,
-    selectedJenisRasio
+    selectedJenisRasio,
+    tableSearch,
+    itemsPerPage
   ],
   () => {
 
@@ -1330,14 +1747,21 @@ onMounted(() => {
 
 <template>
 
-  <div class="space-y-6 pb-10">
+  <div class="space-y-5 pb-10">
 
     <!-- =====================================================
          HEADER
     ====================================================== -->
 
-    <section>
-      <div class="flex flex-col gap-1">
+    <section
+      class="
+        relative overflow-hidden rounded-2xl border border-slate-200/80
+        border-t-4 border-t-teal-600
+        bg-gradient-to-br from-white via-white to-teal-50/60
+        px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] lg:px-6
+      "
+    >
+      <div class="relative flex flex-col gap-1">
 
         <p
           class="
@@ -1345,7 +1769,7 @@ onMounted(() => {
             font-semibold
             uppercase
             tracking-[0.18em]
-            text-blue-600
+            text-teal-700
           "
         >
           Statistik Ekonomi
@@ -1384,12 +1808,13 @@ onMounted(() => {
 
     <section
       class="
-        overflow-hidden
+        overflow-visible
         rounded-2xl
         border
-        border-slate-200
+        border-slate-200/80
+        border-t-2 border-t-teal-500
         bg-white
-        shadow-sm
+        shadow-[0_8px_24px_rgba(15,23,42,0.045)]
       "
     >
 
@@ -1410,7 +1835,12 @@ onMounted(() => {
         "
       >
 
-        <div>
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+            <SlidersHorizontal :size="15" :stroke-width="1.8" />
+          </div>
+
+          <div>
           <h2
             class="
               text-sm
@@ -1418,7 +1848,7 @@ onMounted(() => {
               text-slate-800
             "
           >
-            Pilih Data
+            Filter Analisis Rasio
           </h2>
 
           <p
@@ -1428,14 +1858,22 @@ onMounted(() => {
               text-slate-400
             "
           >
-            Sesuaikan sektor, periode, dan jenis rasio
-            yang ingin ditampilkan.
+            Filter berlaku pada seluruh grafik dan tabel.
           </p>
+          </div>
+
+          <span
+            v-if="activeFilterCount > 0"
+            class="rounded-full bg-teal-50 px-2 py-0.5 text-[9px] font-bold text-teal-800"
+          >
+            {{ activeFilterCount }} aktif
+          </span>
         </div>
 
         <button
           type="button"
           @click="resetFilters"
+          :disabled="activeFilterCount === 0"
           class="
             self-start
             rounded-lg
@@ -1448,20 +1886,46 @@ onMounted(() => {
             font-medium
             text-slate-600
             transition
+            disabled:cursor-not-allowed
+            disabled:opacity-40
             hover:border-slate-300
             hover:bg-slate-50
             sm:self-auto
           "
         >
-          Atur Ulang
+          <RotateCcw :size="12" />
+          Reset
         </button>
 
       </div>
 
 
-      <!-- FILTER CONTENT -->
+      <div class="grid grid-cols-1 gap-3 px-4 pb-4 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+        <MultiSelectFilter
+          v-model="selectedSektor"
+          label="Sektor"
+          placeholder="Semua sektor"
+          :options="sektorOptions"
+        />
+
+        <MultiSelectFilter
+          v-model="selectedPeriode"
+          label="Periode"
+          placeholder="Semua periode"
+          :options="periodeOptions"
+        />
+
+        <MultiSelectFilter
+          v-model="selectedJenisRasio"
+          label="Jenis Rasio"
+          placeholder="Semua jenis rasio"
+          :options="jenisRasioOptions"
+        />
+      </div>
+
 
       <div
+        v-if="false"
         class="
           grid
           grid-cols-1
@@ -2007,6 +2471,19 @@ onMounted(() => {
          CONTENT
     ====================================================== -->
 
+    <section
+      v-else-if="selectedSektor.length === 0"
+      class="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm"
+    >
+      <h2 class="text-base font-semibold text-slate-800">
+        Pilih sektor untuk memulai analisis
+      </h2>
+      <p class="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
+        Pilih satu atau lebih sektor pada filter di atas untuk menampilkan grafik dan data rasio.
+      </p>
+    </section>
+
+
     <template v-else>
 
       <!-- ===================================================
@@ -2017,11 +2494,12 @@ onMounted(() => {
         class="
           rounded-2xl
           border
-          border-slate-200
+          border-slate-200/80
+          border-l-4 border-l-teal-500
           bg-white
           px-5
           py-4
-          shadow-sm
+          shadow-[0_5px_18px_rgba(15,23,42,0.045)]
         "
       >
 
@@ -2057,16 +2535,16 @@ onMounted(() => {
             <span
               class="
                 rounded-full
-                bg-blue-50
+                bg-teal-50
                 px-3
                 py-1.5
                 text-[11px]
                 font-semibold
-                text-blue-700
+                text-teal-800
               "
             >
               Sektor:
-              {{ selectedSektor.join(', ') }}
+              {{ selectedSektor.join(', ') || 'Belum dipilih' }}
             </span>
 
             <span
@@ -2078,13 +2556,13 @@ onMounted(() => {
                 font-medium
               "
               :class="
-                selectedPeriode
+                selectedPeriode.length > 0
                   ? 'bg-slate-100 text-slate-600'
                   : 'bg-slate-50 text-slate-400'
               "
             >
               Periode:
-              {{ selectedPeriode || 'Semua' }}
+              {{ selectedPeriode.join(', ') || 'Semua' }}
             </span>
 
             <span
@@ -2096,13 +2574,13 @@ onMounted(() => {
                 font-medium
               "
               :class="
-                selectedJenisRasio
+                selectedJenisRasio.length > 0
                   ? 'bg-slate-100 text-slate-600'
                   : 'bg-slate-50 text-slate-400'
               "
             >
               Rasio:
-              {{ selectedJenisRasio || 'Semua' }}
+              {{ selectedJenisRasio.join(', ') || 'Semua' }}
             </span>
 
           </div>
@@ -2139,7 +2617,7 @@ onMounted(() => {
                 text-slate-800
               "
             >
-              Ringkasan Indikator
+              Ringkasan Cakupan Data
             </h2>
 
             <p
@@ -2149,114 +2627,44 @@ onMounted(() => {
                 text-slate-400
               "
             >
-              Nilai indikator berdasarkan data
-              yang telah dipilih.
+              Ringkasan jumlah data dan rentang periode sesuai filter.
             </p>
 
           </div>
-
-          <span
-            class="
-              text-xs
-              text-slate-400
-            "
-          >
-            Periode terbaru:
-            <span class="font-semibold text-slate-600">
-              {{ getLatestPeriod() }}
-            </span>
-          </span>
 
         </div>
 
 
         <div
-          class="
-            grid
-            grid-cols-1
-            gap-4
-            md:grid-cols-3
-          "
+          class="grid grid-cols-2 items-start gap-3 xl:grid-cols-4 [&>div]:overflow-hidden [&>div]:border-slate-200/80 [&>div]:border-t-2 [&>div]:shadow-[0_5px_18px_rgba(15,23,42,0.045)] [&>div]:transition [&>div]:duration-200 [&>div:hover]:-translate-y-0.5 [&>div:hover]:shadow-md [&>div:nth-child(1)]:border-t-teal-500 [&>div:nth-child(2)]:border-t-cyan-600 [&>div:nth-child(3)]:border-t-amber-500 [&>div:nth-child(4)]:border-t-rose-500"
         >
-
-          <div
-            v-for="ratio in ratioTypes"
-            :key="ratio"
-            class="
-              group
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              p-5
-              shadow-sm
-              transition
-              hover:-translate-y-0.5
-              hover:shadow-md
-            "
-          >
-
-            <div
-              class="
-                flex
-                items-center
-                justify-between
-              "
-            >
-
-              <span
-                class="
-                  text-sm
-                  font-bold
-                  text-slate-700
-                "
-              >
-                {{ ratio }}
-              </span>
-
-              <span
-                class="
-                  rounded-full
-                  bg-blue-50
-                  px-2.5
-                  py-1
-                  text-[10px]
-                  font-semibold
-                  text-blue-600
-                "
-              >
-                Rasio
-              </span>
-
-            </div>
-
-            <div
-              class="
-                mt-4
-                text-3xl
-                font-bold
-                tracking-tight
-                text-slate-900
-              "
-            >
-              {{ getLatestRatio(ratio) }}
-            </div>
-
-            <p
-              class="
-                mt-2
-                text-xs
-                leading-5
-                text-slate-400
-              "
-            >
-              {{ ratioDescriptions[ratio] }}
+          <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p class="text-[10px] font-semibold uppercase text-slate-400">Observasi</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">
+              {{ summaryMetrics.observations.toLocaleString('id-ID') }}
             </p>
-
           </div>
-
+          <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p class="text-[10px] font-semibold uppercase text-slate-400">Sektor</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">
+              {{ summaryMetrics.sectors }}
+            </p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p class="text-[10px] font-semibold uppercase text-slate-400">Periode Tahunan</p>
+            <p class="mt-1 text-sm font-bold text-slate-800">
+              {{ summaryMetrics.annualPeriodCount.toLocaleString('id-ID') }} periode
+            </p>
+            <p class="mt-0.5 text-[10px] text-slate-400">{{ summaryMetrics.annualCoverage }}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <p class="text-[10px] font-semibold uppercase text-slate-400">Periode Triwulanan</p>
+            <p class="mt-1 text-sm font-bold text-slate-800">
+              {{ summaryMetrics.quarterlyPeriodCount.toLocaleString('id-ID') }} periode
+            </p>
+            <p class="mt-0.5 text-[10px] text-slate-400">{{ summaryMetrics.quarterlyCoverage }}</p>
+          </div>
         </div>
-
       </section>
 
 
@@ -2264,14 +2672,20 @@ onMounted(() => {
            CHART TAHUNAN
       ==================================================== -->
 
+      <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+
       <section
+        v-for="chart in charts"
+        :key="chart.key"
         class="
           overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
+          rounded-xl
+          border border-slate-200/80
+          border-t-2 border-t-teal-500
           bg-white
-          shadow-sm
+          shadow-[0_6px_20px_rgba(15,23,42,0.045)]
+          transition-shadow duration-200
+          hover:shadow-md
         "
       >
 
@@ -2304,7 +2718,7 @@ onMounted(() => {
                   text-slate-800
                 "
               >
-                Perkembangan Rasio Tahunan
+                Grafik {{ chart.ratio }}
               </h2>
 
               <p
@@ -2314,26 +2728,44 @@ onMounted(() => {
                   text-slate-400
                 "
               >
-                Perkembangan indikator rasio
-                berdasarkan tahun.
+                {{ ratioDescriptions[chart.ratio] || chart.ratio }}
               </p>
 
             </div>
 
-            <span
+            <div
               class="
+                inline-flex
                 w-fit
-                rounded-full
-                bg-slate-50
-                px-2.5
-                py-1
-                text-[10px]
-                font-semibold
-                text-slate-500
+                shrink-0
+                rounded-lg
+                bg-slate-100
+                p-1
               "
             >
-              Data Tahunan
-            </span>
+              <button
+                type="button"
+                class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
+                :class="chart.periodLabel === 'Tahunan'
+                  ? 'bg-white text-teal-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'"
+                :aria-pressed="chart.periodLabel === 'Tahunan'"
+                @click="setRatioChartMode(chart.ratio, 'Tahunan')"
+              >
+                Tahunan
+              </button>
+              <button
+                type="button"
+                class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
+                :class="chart.periodLabel === 'Triwulanan'
+                  ? 'bg-white text-cyan-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'"
+                :aria-pressed="chart.periodLabel === 'Triwulanan'"
+                @click="setRatioChartMode(chart.ratio, 'Triwulanan')"
+              >
+                Triwulanan
+              </button>
+            </div>
 
           </div>
 
@@ -2341,12 +2773,12 @@ onMounted(() => {
 
 
         <div
-          v-if="annualChartRows.length > 0"
-          class="h-[380px] p-3 sm:p-4"
+          v-if="chart.hasData"
+          class="h-[350px] min-w-0 p-3 sm:p-5"
         >
 
           <VChart
-            :option="annualChartOption"
+            :option="chart.option"
             autoresize
             class="h-full w-full"
           />
@@ -2358,128 +2790,20 @@ onMounted(() => {
           v-else
           class="
             flex
-            h-[280px]
+            h-[350px]
             items-center
             justify-center
             text-sm
             text-slate-400
           "
         >
-          Tidak ada data tahunan.
+          Tidak ada data {{ chart.ratio }} {{ chart.periodLabel.toLowerCase() }} yang sesuai dengan filter.
         </div>
 
       </section>
 
 
-      <!-- ===================================================
-           CHART TRIWULANAN
-      ==================================================== -->
-
-      <section
-        class="
-          overflow-hidden
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          shadow-sm
-        "
-      >
-
-        <div
-          class="
-            border-b
-            border-slate-100
-            px-5
-            py-4
-          "
-        >
-
-          <div
-            class="
-              flex
-              flex-col
-              gap-1
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-            "
-          >
-
-            <div>
-
-              <h2
-                class="
-                  text-base
-                  font-bold
-                  text-slate-800
-                "
-              >
-                Perkembangan Rasio Triwulanan
-              </h2>
-
-              <p
-                class="
-                  mt-1
-                  text-xs
-                  text-slate-400
-                "
-              >
-                Perkembangan indikator rasio
-                berdasarkan periode triwulanan.
-              </p>
-
-            </div>
-
-            <span
-              class="
-                w-fit
-                rounded-full
-                bg-slate-50
-                px-2.5
-                py-1
-                text-[10px]
-                font-semibold
-                text-slate-500
-              "
-            >
-              Data Triwulanan
-            </span>
-
-          </div>
-
-        </div>
-
-
-        <div
-          v-if="quarterlyChartRows.length > 0"
-          class="h-[380px] p-3 sm:p-4"
-        >
-
-          <VChart
-            :option="quarterlyChartOption"
-            autoresize
-            class="h-full w-full"
-          />
-
-        </div>
-
-
-        <div
-          v-else
-          class="
-            flex
-            h-[280px]
-            items-center
-            justify-center
-            text-sm
-            text-slate-400
-          "
-        >
-          Tidak ada data triwulanan.
-        </div>
-
-      </section>
+      </div>
 
 
       <!-- ===================================================
@@ -2488,12 +2812,125 @@ onMounted(() => {
 
       <section
         class="
+          border-t-2
+          border-teal-200
+          pt-5
+        "
+        aria-labelledby="glosarium-indikator-title"
+      >
+        <div
+          class="
+            flex
+            flex-col
+            gap-3
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+          "
+        >
+          <div class="flex min-w-0 items-center gap-3">
+            <div
+              class="
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-lg
+                bg-teal-50
+                text-teal-800
+              "
+            >
+              <BookOpen :size="16" :stroke-width="1.8" />
+            </div>
+
+            <div class="min-w-0">
+              <h2
+                id="glosarium-indikator-title"
+                class="text-xs font-bold text-slate-800"
+              >
+                Glosarium Indikator Sektoral
+              </h2>
+              <p class="mt-0.5 text-[10px] text-slate-500">
+                Arti singkatan dan rasio yang digunakan
+              </p>
+            </div>
+          </div>
+
+          <p
+            class="
+              pl-12
+              text-[10px]
+              leading-4
+              text-slate-400
+              sm:pl-0
+              sm:text-right
+            "
+          >
+            Klasifikasi Standar: Sistem Neraca Nasional (SNA 2008)
+          </p>
+        </div>
+
+        <dl
+          class="
+            mt-4
+            grid
+            grid-cols-1
+            gap-2.5
+            sm:grid-cols-2
+            xl:grid-cols-3
+            2xl:grid-cols-6
+          "
+        >
+          <div
+            v-for="indicator in [
+              { code: 'COE / VA', description: 'Kompensasi tenaga kerja terhadap nilai tambah bruto', accent: 'border-blue-500' },
+              { code: 'PMTB / DI', description: 'Pembentukan modal tetap bruto terhadap pendapatan disposabel', accent: 'border-emerald-500' },
+              { code: 'IA / OUTPUT', description: 'Alokasi investasi terhadap total output sektoral', accent: 'border-amber-500' },
+              { code: 'PNB / PDB', description: 'Pendapatan nasional bruto terhadap produk domestik bruto', accent: 'border-cyan-600' },
+              { code: 'KMT / PMTB', description: 'Rasio pinjaman neto terhadap pembentukan modal tetap bruto', accent: 'border-orange-500' },
+              { code: 'NET / NTB', description: 'Neraca neto sektoral terhadap nilai tambah bruto', accent: 'border-violet-500' }
+            ]"
+            :key="indicator.code"
+            class="
+              min-w-0
+              rounded-xl
+              border-l-2
+              border-y
+              border-r
+              border-y-slate-200/80
+              border-r-slate-200/80
+              bg-white
+              px-3.5
+              py-3
+              shadow-[0_3px_12px_rgba(15,23,42,0.035)]
+              transition duration-200
+              hover:-translate-y-0.5
+              hover:bg-slate-50/80
+              hover:shadow-sm
+            "
+            :class="indicator.accent"
+          >
+            <dt class="text-[10px] font-bold text-slate-800">
+              {{ indicator.code }}
+            </dt>
+            <dd class="mt-1.5 text-[10px] leading-[1.45] text-slate-500">
+              {{ indicator.description }}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+
+      <section
+        class="
           overflow-hidden
           rounded-2xl
-          border
-          border-slate-200
+          border border-slate-200/80
+          border-t-2 border-t-cyan-600
           bg-white
-          shadow-sm
+          shadow-[0_6px_20px_rgba(15,23,42,0.045)]
         "
       >
 
@@ -2503,8 +2940,8 @@ onMounted(() => {
           class="
             border-b
             border-slate-200
-            px-5
-            py-5
+            px-4
+            py-3
           "
         >
 
@@ -2538,26 +2975,40 @@ onMounted(() => {
                   text-slate-400
                 "
               >
-                Nilai rasio menurut periode
-                pengamatan.
+                Cari berdasarkan periode, sektor, frekuensi, jenis rasio, atau nilai.
               </p>
 
             </div>
 
-            <span
-              class="
-                w-fit
-                rounded-full
-                bg-slate-50
-                px-2.5
-                py-1
-                text-[10px]
-                font-semibold
-                text-slate-500
-              "
-            >
-              {{ statisticTable.length }} periode
-            </span>
+            <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <label class="relative block w-full sm:w-72">
+                <Search
+                  :size="15"
+                  class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  v-model="tableSearch"
+                  type="search"
+                  aria-label="Cari tabel statistik"
+                  placeholder="Cari sektor, periode, rasio..."
+                  class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-9 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
+                />
+                <button
+                  v-if="tableSearch"
+                  type="button"
+                  aria-label="Hapus pencarian tabel"
+                  title="Hapus pencarian"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                  @click="tableSearch = ''"
+                >
+                  <X :size="13" />
+                </button>
+              </label>
+
+              <span class="whitespace-nowrap text-[10px] font-semibold text-slate-500">
+                {{ searchedTable.length.toLocaleString('id-ID') }} / {{ statisticTable.length.toLocaleString('id-ID') }} baris
+              </span>
+            </div>
 
           </div>
 
@@ -2570,7 +3021,8 @@ onMounted(() => {
 
           <table
             class="
-              min-w-full
+              min-w-max
+              w-full
               border-collapse
             "
           >
@@ -2579,6 +3031,9 @@ onMounted(() => {
 
               <tr
                 class="
+                  sticky
+                  top-0
+                  z-10
                   border-b
                   border-slate-200
                   bg-slate-50
@@ -2587,8 +3042,8 @@ onMounted(() => {
 
                 <th
                   class="
-                    px-5
-                    py-3.5
+                    px-3
+                    py-2.5
                     text-left
                     text-[11px]
                     font-bold
@@ -2597,13 +3052,51 @@ onMounted(() => {
                     text-slate-500
                   "
                 >
-                  Periode
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 hover:text-slate-800"
+                    :aria-sort="tableSortKey === 'periode'
+                      ? (tableSortDirection === 'asc' ? 'ascending' : 'descending')
+                      : 'none'"
+                    @click="toggleTableSort('periode')"
+                  >
+                    Periode
+                    <component :is="getTableSortIcon('periode')" :size="12" />
+                  </button>
                 </th>
 
                 <th
                   class="
-                    px-5
-                    py-3.5
+                    px-3
+                    py-2.5
+                    text-left
+                    text-[11px]
+                    font-bold
+                    uppercase
+                    tracking-wide
+                    text-slate-500
+                  "
+                >
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 hover:text-slate-800"
+                    :aria-sort="tableSortKey === 'sektor'
+                      ? (tableSortDirection === 'asc' ? 'ascending' : 'descending')
+                      : 'none'"
+                    @click="toggleTableSort('sektor')"
+                  >
+                    Sektor
+                    <component :is="getTableSortIcon('sektor')" :size="12" />
+                  </button>
+                </th>
+
+                <th
+                  v-for="ratio in tableRatioTypes"
+                  :key="ratio"
+                  class="
+                    whitespace-nowrap
+                    px-3
+                    py-2.5
                     text-right
                     text-[11px]
                     font-bold
@@ -2612,37 +3105,17 @@ onMounted(() => {
                     text-slate-500
                   "
                 >
-                  COE/VA
-                </th>
-
-                <th
-                  class="
-                    px-5
-                    py-3.5
-                    text-right
-                    text-[11px]
-                    font-bold
-                    uppercase
-                    tracking-wide
-                    text-slate-500
-                  "
-                >
-                  PMTB/DI
-                </th>
-
-                <th
-                  class="
-                    px-5
-                    py-3.5
-                    text-right
-                    text-[11px]
-                    font-bold
-                    uppercase
-                    tracking-wide
-                    text-slate-500
-                  "
-                >
-                  IA/Output
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 hover:text-slate-800"
+                    :aria-sort="tableSortKey === `ratio:${ratio}`
+                      ? (tableSortDirection === 'asc' ? 'ascending' : 'descending')
+                      : 'none'"
+                    @click="toggleTableSort(`ratio:${ratio}`)"
+                  >
+                    {{ ratio }}
+                    <component :is="getTableSortIcon(`ratio:${ratio}`)" :size="12" />
+                  </button>
                 </th>
 
               </tr>
@@ -2654,10 +3127,11 @@ onMounted(() => {
 
               <tr
                 v-for="row in paginatedTable"
-                :key="row.periode"
+                :key="row.key"
                 class="
                   border-b
                   border-slate-100
+                  even:bg-slate-50/50
                   transition
                   hover:bg-slate-50
                 "
@@ -2666,53 +3140,63 @@ onMounted(() => {
                 <td
                   class="
                     whitespace-nowrap
-                    px-5
-                    py-3.5
+                    px-3
+                    py-2.5
                     text-sm
                     font-semibold
                     text-slate-700
                   "
                 >
-                  {{ row.periode }}
+                  <span>{{ row.periode }}</span>
+                  <span
+                    class="ml-1.5 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase"
+                    :class="row.periode.includes('/Q')
+                      ? 'bg-cyan-50 text-cyan-700'
+                      : 'bg-teal-50 text-teal-800'"
+                  >
+                    {{ row.periode.includes('/Q') ? 'Triwulan' : 'Tahunan' }}
+                  </span>
                 </td>
 
                 <td
                   class="
-                    px-5
-                    py-3.5
-                    text-right
-                    text-sm
-                    tabular-nums
+                    whitespace-nowrap
+                    px-3
+                    py-2.5
+                    text-xs
                     text-slate-600
                   "
                 >
-                  {{ row['COE/VA'] }}
+                  <span class="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1">
+                    <span
+                      class="h-1.5 w-1.5 shrink-0 rounded-full"
+                      :style="{ backgroundColor: sectorColors[row.sektor] || '#64748b' }"
+                    ></span>
+                    <span class="text-[10px] font-bold text-slate-700">{{ row.sektor }}</span>
+                    <span class="text-[9px] text-slate-500">{{ getSectorName(row.sektor) }}</span>
+                  </span>
                 </td>
 
                 <td
+                  v-for="ratio in tableRatioTypes"
+                  :key="ratio"
                   class="
-                    px-5
-                    py-3.5
+                    whitespace-nowrap
+                    px-3
+                    py-2.5
                     text-right
-                    text-sm
+                    text-xs
                     tabular-nums
-                    text-slate-600
                   "
+                  :class="numericValue(row.values[ratio]) === null
+                    ? 'text-slate-400'
+                    : numericValue(row.values[ratio]) > 0
+                      ? 'text-emerald-700'
+                      : numericValue(row.values[ratio]) < 0
+                        ? 'text-rose-600'
+                        : 'text-slate-600'"
                 >
-                  {{ row['PMTB/DI'] }}
-                </td>
-
-                <td
-                  class="
-                    px-5
-                    py-3.5
-                    text-right
-                    text-sm
-                    tabular-nums
-                    text-slate-600
-                  "
-                >
-                  {{ row['IA/Output'] }}
+                  {{ row.values[ratio] ?? '-' }}
                 </td>
 
               </tr>
@@ -2723,7 +3207,7 @@ onMounted(() => {
               >
 
                 <td
-                  colspan="4"
+                  :colspan="tableRatioTypes.length + 2"
                   class="
                     px-5
                     py-12
@@ -2732,8 +3216,9 @@ onMounted(() => {
                     text-slate-400
                   "
                 >
-                  Tidak ada data yang sesuai
-                  dengan filter.
+                  {{ tableSearch
+                    ? 'Tidak ada baris yang cocok dengan pencarian.'
+                    : 'Tidak ada data yang sesuai dengan filter.' }}
                 </td>
 
               </tr>
@@ -2748,93 +3233,83 @@ onMounted(() => {
         <!-- PAGINATION -->
 
         <div
-          v-if="totalPages > 1"
           class="
             flex
             flex-col
-            gap-3
+            gap-4
             border-t
             border-slate-200
-            px-5
-            py-4
-            sm:flex-row
-            sm:items-center
-            sm:justify-between
+            px-4
+            py-3
+            lg:flex-row
+            lg:items-center
+            lg:justify-between
           "
         >
 
-          <button
-            type="button"
-            @click="goToPage(currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="
-              rounded-lg
-              border
-              border-slate-200
-              px-3
-              py-2
-              text-xs
-              font-medium
-              text-slate-600
-              transition
-              hover:bg-slate-50
-              disabled:cursor-not-allowed
-              disabled:opacity-40
-            "
-          >
-            ← Sebelumnya
-          </button>
-
-
-          <span
-            class="
-              text-center
-              text-xs
-              text-slate-400
-            "
-          >
-            Halaman
-            <span
-              class="
-                font-semibold
-                text-slate-600
-              "
-            >
-              {{ currentPage }}
+          <div class="flex flex-col gap-1 text-[10px] text-slate-500 sm:flex-row sm:items-center sm:gap-2">
+            <span>
+              Menampilkan
+              <strong class="text-slate-700">{{ pageRangeStart }} - {{ pageRangeEnd }}</strong>
+              dari
+              <strong class="text-slate-700">{{ sortedTable.length.toLocaleString('id-ID') }}</strong>
+              baris
             </span>
-            dari
-            <span
-              class="
-                font-semibold
-                text-slate-600
-              "
-            >
-              {{ totalPages }}
-            </span>
-          </span>
+            <span v-if="tableSearch" class="text-slate-400">(hasil pencarian)</span>
+          </div>
 
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+            <label class="flex items-center gap-2 whitespace-nowrap text-[10px] text-slate-500">
+              Baris per halaman
+              <select
+                v-model.number="itemsPerPage"
+                class="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              >
+                <option :value="10">10</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+              </select>
+            </label>
 
-          <button
-            type="button"
-            @click="goToPage(currentPage + 1)"
-            :disabled="currentPage === totalPages"
-            class="
-              rounded-lg
-              border
-              border-slate-200
-              px-3
-              py-2
-              text-xs
-              font-medium
-              text-slate-600
-              transition
-              hover:bg-slate-50
-              disabled:cursor-not-allowed
-              disabled:opacity-40
-            "
-          >
-            Berikutnya →
-          </button>
+            <nav class="flex items-center gap-1" aria-label="Navigasi halaman tabel">
+              <button
+                type="button"
+                aria-label="Halaman sebelumnya"
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage === 1 || sortedTable.length === 0"
+                class="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Sebelumnya
+              </button>
+
+              <template v-for="page in pageNumbers" :key="`page-${page}`">
+                <button
+                  v-if="typeof page === 'number'"
+                  type="button"
+                  :aria-label="`Halaman ${page}`"
+                  :aria-current="currentPage === page ? 'page' : undefined"
+                  @click="goToPage(page)"
+                  class="h-7 min-w-7 rounded-md px-2 text-[10px] font-semibold transition"
+                  :class="currentPage === page
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'"
+                >
+                  {{ page }}
+                </button>
+                <span v-else class="px-1 text-[10px] text-slate-400">...</span>
+              </template>
+
+              <button
+                type="button"
+                aria-label="Halaman berikutnya"
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage === totalPages || sortedTable.length === 0"
+                class="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Berikutnya
+              </button>
+            </nav>
+          </div>
 
         </div>
 

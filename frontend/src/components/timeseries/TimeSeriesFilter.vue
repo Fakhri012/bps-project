@@ -745,8 +745,9 @@ onMounted(
       rounded-xl
       border
       border-slate-200/80
+      border-t-2 border-t-teal-500
       bg-white
-      shadow-[0_1px_3px_rgba(15,23,42,0.03)]
+      shadow-[0_8px_24px_rgba(15,23,42,0.045)]
     "
   >
     <!-- =====================================================
@@ -784,8 +785,8 @@ onMounted(
             items-center
             justify-center
             rounded-lg
-            bg-violet-50
-            text-violet-600
+            bg-teal-50
+            text-teal-700
           "
         >
           <SlidersHorizontal
@@ -820,12 +821,12 @@ onMounted(
               "
               class="
                 rounded-full
-                bg-violet-50
+                bg-teal-50
                 px-2
                 py-0.5
                 text-[9px]
                 font-bold
-                text-violet-600
+                text-teal-700
               "
             >
               {{ activeCount }} aktif

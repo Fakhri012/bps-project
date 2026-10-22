@@ -5,7 +5,8 @@ const {
   buildTahunanTimeSeries,
   buildTriwulananTimeSeries,
   buildTahunanKlasifikasiTimeSeries,
-  buildTriwulananKlasifikasiTimeSeries
+  buildTriwulananKlasifikasiTimeSeries,
+  getLandingNationalIndicators
 } = require('../src/controllers/dashboardController')
 
 const annualRows = [
@@ -322,4 +323,26 @@ test('quarterly classification data retains chronological periods separately', (
       ['Klasifikasi Y', '2021 Q1', 8]
     ]
   )
+})
+
+test('landing overview aggregates only TOTAL EKN indicators for the latest period', () => {
+  const rows = [
+    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 10 },
+    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 2 },
+    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Tabungan bruto', nilai: 4 },
+    { tahun: 2025, triwulan: 3, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 100 },
+    { tahun: 2025, triwulan: 4, sektor: 'FC', rincian: 'Nilai tambah bruto', nilai: 200 },
+    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Invalid', nilai: 'not-a-number' }
+  ]
+
+  const result = getLandingNationalIndicators(rows, {
+    frequency: 'triwulanan',
+    year: 2025,
+    quarter: 4
+  })
+
+  assert.deepEqual(result, [
+    { klasifikasi: 'Nilai tambah bruto', nilai: 12 },
+    { klasifikasi: 'Tabungan bruto', nilai: 4 }
+  ])
 })

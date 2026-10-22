@@ -146,7 +146,14 @@ test('merges annual sector suffixes and preserves annual summary output', () => 
           nama: 'Pemerintah Umum',
           nilai: -10
         }
-      ]
+      ],
+      metadata: {
+        konsep: [],
+        jumlahKonsep: 0,
+        periode: ['2023'],
+        sektor: ['FC', 'GG', 'NFC'],
+        rincian: ['PENGGUNAAN']
+      }
     }
   )
 })
@@ -207,7 +214,14 @@ test('merges quarterly sector suffixes and preserves filtered summary output', (
           nama: 'Pemerintah Umum',
           nilai: -2
         }
-      ]
+      ],
+      metadata: {
+        konsep: [],
+        jumlahKonsep: 0,
+        periode: ['2023/Q1'],
+        sektor: ['FC', 'GG', 'NFC'],
+        rincian: ['PENGGUNAAN']
+      }
     }
   )
 })
@@ -249,7 +263,14 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
         nama: 'Household',
         nilai: -4
       }
-    ]
+    ],
+    metadata: {
+      konsep: [],
+      jumlahKonsep: 0,
+      periode: ['2023'],
+      sektor: ['FC', 'GG', 'HH', 'ROW'],
+      rincian: []
+    }
   }
 
   assert.deepEqual(
@@ -269,7 +290,14 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
     jumlahBaris: 0,
     totalNilai: 0,
     kontributorTerbesar: null,
-    institusi: []
+    institusi: [],
+    metadata: {
+      konsep: [],
+      jumlahKonsep: 0,
+      periode: [],
+      sektor: [],
+      rincian: []
+    }
   }
 
   assert.deepEqual(
@@ -283,5 +311,69 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
       { tahun: '2023', triwulan: '1' }
     ),
     emptySummary
+  )
+})
+
+test('returns distinct metadata only for rows matching dashboard filters', () => {
+  const annualRows = mapper.mapTahunanData([
+    {
+      ...createRow('FC', '5', '2024', 'K1'),
+      KONSEP: 'Konsep A'
+    },
+    {
+      ...createRow('FC 2', '6', '2024', 'K1'),
+      KONSEP: 'Konsep B'
+    },
+    {
+      ...createRow('FC', '7', '2023', 'K2'),
+      KONSEP: 'Konsep tahun lalu'
+    },
+    {
+      ...createRow('GG', '8', '2024', 'K3'),
+      KONSEP: 'Konsep sektor lain'
+    }
+  ])
+
+  assert.deepEqual(
+    mapper.generateTahunanSummary(
+      annualRows,
+      { tahun: '2024', institusi: 'FC' }
+    ).metadata,
+    {
+      konsep: [],
+      jumlahKonsep: 2,
+      periode: ['2024'],
+      sektor: ['FC'],
+      rincian: ['PENGGUNAAN']
+    }
+  )
+
+  const quarterlyRows = mapper.mapTriwulananData([
+    {
+      ...createRow('FC', '5', '2024/Q3', 'K1'),
+      KONSEP: 'Konsep triwulan terpilih'
+    },
+    {
+      ...createRow('FC', '6', '2024/Q2', 'K1'),
+      KONSEP: 'Konsep triwulan lain'
+    },
+    {
+      ...createRow('GG', '7', '2024/Q3', 'K1'),
+      KONSEP: 'Konsep sektor lain'
+    }
+  ])
+
+  assert.deepEqual(
+    mapper.generateTriwulananSummary(
+      quarterlyRows,
+      { tahun: '2024', triwulan: '3', institusi: 'FC' }
+    ).metadata,
+    {
+      konsep: ['Konsep triwulan terpilih'],
+      jumlahKonsep: 1,
+      periode: ['2024/Q3'],
+      sektor: ['FC'],
+      rincian: ['PENGGUNAAN']
+    }
   )
 })

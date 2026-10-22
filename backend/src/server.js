@@ -17,7 +17,7 @@ app.listen(PORT, () => {
   warmDashboardCache().catch(error => {
     console.error(
       'Dashboard cache warm-up failed:',
-      error
+      error instanceof Error ? error.name : 'UnknownError'
     )
   })
 })

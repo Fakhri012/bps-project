@@ -317,9 +317,16 @@ function growthClass(
     class="
       grid
       grid-cols-1
+      items-start
       gap-3
       sm:grid-cols-2
       xl:grid-cols-4
+      [&>article]:border-t-2
+      [&>article]:border-t-teal-500
+      [&>article]:transition
+      [&>article]:duration-200
+      [&>article:hover]:-translate-y-0.5
+      [&>article:hover]:shadow-md
     "
   >
     <!-- =====================================================

@@ -8,12 +8,25 @@ import {
 
 import {
   CalendarDays,
-  Database
+  Database,
+  Menu,
+  X
 } from 'lucide-vue-next'
 
 import {
   getCacheInfo
 } from '../../services/dashboardApi'
+
+defineProps({
+  mobileSidebarOpen: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits([
+  'toggle-sidebar'
+])
 
 
 /*
@@ -269,8 +282,11 @@ onBeforeUnmount(() => {
         flex min-h-[88px]
         items-center
         justify-between
-        gap-6
-        px-6 lg:px-8
+        gap-3
+        px-3
+        sm:gap-6
+        sm:px-6
+        lg:px-8
       "
     >
 
@@ -285,6 +301,33 @@ onBeforeUnmount(() => {
           "
         >
 
+          <button
+            type="button"
+            class="
+              inline-flex
+              h-9 w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              text-slate-600
+              transition-colors
+              hover:bg-slate-100
+              focus-visible:outline
+              focus-visible:outline-2
+              focus-visible:outline-offset-2
+              focus-visible:outline-blue-600
+              md:hidden
+            "
+            :aria-label="mobileSidebarOpen ? 'Tutup navigasi' : 'Buka navigasi'"
+            :aria-expanded="mobileSidebarOpen"
+            :title="mobileSidebarOpen ? 'Tutup navigasi' : 'Buka navigasi'"
+            @click="emit('toggle-sidebar')"
+          >
+            <X v-if="mobileSidebarOpen" :size="18" />
+            <Menu v-else :size="18" />
+          </button>
+
           <div
             class="
               h-8 w-1
@@ -298,7 +341,8 @@ onBeforeUnmount(() => {
 
             <h1
               class="
-                text-xl
+                text-base
+                sm:text-xl
                 font-bold
                 tracking-tight
                 text-slate-900
@@ -311,6 +355,8 @@ onBeforeUnmount(() => {
             <p
               class="
                 mt-1
+                hidden
+                sm:block
                 text-xs
                 text-slate-400
               "

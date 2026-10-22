@@ -4,14 +4,25 @@ const dashboardRoutes = require('./routes/dashboardRoutes')
 const analisisRasioRoutes = require('./routes/analisisRasioRoutes')
 
 const app = express()
+app.disable('x-powered-by')
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://127.0.0.1:5173'
+  ...(process.env.NODE_ENV === 'production'
+    ? []
+    : [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173'
+      ])
 ].filter(Boolean)
 
 app.use(cors({ origin: allowedOrigins }))
+
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  next()
+})
 
 app.use(express.json())
 

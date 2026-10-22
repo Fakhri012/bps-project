@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  nextTick,
   ref,
   watch
 } from 'vue'
@@ -162,10 +163,10 @@ function getSisiTheme(value) {
   ) {
     return {
       badge:
-        'border-blue-100 bg-blue-50 text-blue-700',
+        'border-teal-100 bg-teal-50 text-teal-800',
 
       accent:
-        'before:bg-blue-500'
+        'before:bg-teal-600'
     }
   }
 
@@ -339,6 +340,9 @@ const pageInput =
     )
   )
 
+const tableViewport = ref(null)
+let pendingPageScroll = null
+
 
 /*
  * Kalau halaman berubah melalui
@@ -354,6 +358,30 @@ watch(
       String(
         newPage || 1
       )
+  }
+)
+
+watch(
+  () => props.loading,
+  async isLoading => {
+    if (isLoading || !pendingPageScroll) {
+      return
+    }
+
+    await nextTick()
+
+    const scrollPosition = pendingPageScroll
+    pendingPageScroll = null
+
+    if (tableViewport.value) {
+      tableViewport.value.scrollTop =
+        scrollPosition.tableTop
+    }
+
+    window.scrollTo(
+      0,
+      scrollPosition.pageTop
+    )
   }
 )
 
@@ -442,6 +470,11 @@ function goToPage(page) {
       props.pagination.page
   ) {
     return
+  }
+
+  pendingPageScroll = {
+    pageTop: window.scrollY,
+    tableTop: tableViewport.value?.scrollTop || 0
   }
 
   emit(
@@ -576,8 +609,9 @@ function getNilaiClass(value) {
       rounded-[20px]
       border
       border-slate-200/80
+      border-t-2 border-t-teal-500
       bg-white
-      shadow-[0_1px_3px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.03)]
+      shadow-[0_8px_24px_rgba(15,23,42,0.05)]
     "
   >
 
@@ -619,10 +653,10 @@ function getNilaiClass(value) {
             items-center
             justify-center
             rounded-xl
-            bg-blue-600
+            bg-teal-700
             text-white
             shadow-md
-            shadow-blue-200/60
+            shadow-teal-200/60
           "
         >
           <TableProperties
@@ -654,15 +688,15 @@ function getNilaiClass(value) {
               class="
                 rounded-full
                 border
-                border-blue-100
-                bg-blue-50
+                border-teal-100
+                bg-teal-50
                 px-2
                 py-0.5
                 text-[9px]
                 font-bold
                 uppercase
                 tracking-wider
-                text-blue-600
+                text-teal-800
               "
             >
               Detail
@@ -774,7 +808,7 @@ function getNilaiClass(value) {
 
                 ? `
                     bg-white
-                    text-blue-600
+                    text-teal-700
                     shadow-sm
                     ring-1
                     ring-slate-200/60
@@ -903,6 +937,7 @@ function getNilaiClass(value) {
       v-else-if="
         rows.length > 0
       "
+      ref="tableViewport"
       class="
         max-h-[680px]
         overflow-auto
@@ -1075,7 +1110,7 @@ function getNilaiClass(value) {
               transition-all
               duration-150
               even:bg-slate-50/30
-              hover:bg-blue-50/40
+              hover:bg-teal-50/50
             "
           >
 
@@ -1681,9 +1716,9 @@ function getNilaiClass(value) {
         border-slate-200
         bg-white
         transition
-        focus-within:border-blue-400
+        focus-within:border-teal-500
         focus-within:ring-2
-        focus-within:ring-blue-100
+        focus-within:ring-teal-100
       "
     >
       <input
@@ -1722,9 +1757,9 @@ function getNilaiClass(value) {
           px-3
           text-[10px]
           font-bold
-          text-blue-600
+          text-teal-700
           transition
-          hover:bg-blue-50
+          hover:bg-teal-50
         "
         @click="
           jumpToPage
@@ -1765,9 +1800,9 @@ function getNilaiClass(value) {
             bg-white
             text-slate-400
             transition
-            hover:border-blue-200
-            hover:bg-blue-50
-            hover:text-blue-600
+            hover:border-teal-200
+            hover:bg-teal-50
+            hover:text-teal-700
             disabled:cursor-not-allowed
             disabled:opacity-30
           "
@@ -1800,9 +1835,9 @@ function getNilaiClass(value) {
             bg-white
             text-slate-500
             transition
-            hover:border-blue-200
-            hover:bg-blue-50
-            hover:text-blue-600
+            hover:border-teal-200
+            hover:bg-teal-50
+            hover:text-teal-700
             disabled:cursor-not-allowed
             disabled:opacity-30
           "
@@ -1860,10 +1895,10 @@ function getNilaiClass(value) {
               pagination.page
 
                 ? `
-                    bg-blue-600
+                    bg-teal-700
                     text-white
                     shadow-sm
-                    shadow-blue-200
+                    shadow-teal-200
                   `
 
                 : `
@@ -1903,9 +1938,9 @@ function getNilaiClass(value) {
             bg-white
             text-slate-500
             transition
-            hover:border-blue-200
-            hover:bg-blue-50
-            hover:text-blue-600
+            hover:border-teal-200
+            hover:bg-teal-50
+            hover:text-teal-700
             disabled:cursor-not-allowed
             disabled:opacity-30
           "
@@ -1941,9 +1976,9 @@ function getNilaiClass(value) {
             bg-white
             text-slate-400
             transition
-            hover:border-blue-200
-            hover:bg-blue-50
-            hover:text-blue-600
+            hover:border-teal-200
+            hover:bg-teal-50
+            hover:text-teal-700
             disabled:cursor-not-allowed
             disabled:opacity-30
           "

@@ -518,6 +518,11 @@ const sektor =
         row['NERACA - RINCIAN']
       ),
 
+    konsep:
+      cleanText(
+        row['KONSEP']
+      ),
+
     nilai:
       parseNilai(row['NILAI'])
   }
@@ -1137,6 +1142,46 @@ function getInstitusiOptions(data) {
 */
 
 function generateSummaryFromFilteredData(filteredData) {
+  const collectMetadataValues = values =>
+    uniqueValues(
+      values
+        .map(value => cleanText(value))
+        .filter(Boolean)
+    ).sort((first, second) =>
+      first.localeCompare(
+        second,
+        'id',
+        { numeric: true, sensitivity: 'base' }
+      )
+    )
+
+  const concepts = collectMetadataValues(
+    filteredData.flatMap(item =>
+      Array.isArray(item.konsep)
+        ? item.konsep
+        : [item.konsep]
+    )
+  )
+
+  const metadata = {
+    konsep:
+      concepts.length === 1
+        ? concepts
+        : [],
+    jumlahKonsep: concepts.length,
+    periode: collectMetadataValues(
+      filteredData.map(item =>
+        item.periode || item.tahun
+      )
+    ),
+    sektor: collectMetadataValues(
+      filteredData.map(item => item.sektor)
+    ),
+    rincian: collectMetadataValues(
+      filteredData.map(item => item.rincian)
+    )
+  }
+
   const institusiMapResult =
     new Map()
 
@@ -1221,7 +1266,9 @@ function generateSummaryFromFilteredData(filteredData) {
 
     kontributorTerbesar,
 
-    institusi
+    institusi,
+
+    metadata
   }
 }
 
@@ -1394,6 +1441,11 @@ function mapTriwulananRow(row) {
         row['NERACA - RINCIAN']
       ),
 
+    konsep:
+      cleanText(
+        row['KONSEP']
+      ),
+
     /*
      * Kalau NILAI masih kosong:
      * null
@@ -1469,6 +1521,10 @@ function mergeBySektor(data) {
             getInstitusiName(
               sektor
             ),
+          konsep:
+            item.konsep
+              ? [item.konsep]
+              : [],
           nilai:
             Number(item.nilai) || 0
         }
@@ -1476,6 +1532,13 @@ function mergeBySektor(data) {
     } else {
       const existing =
         grouped.get(key)
+
+      if (item.konsep) {
+        existing.konsep = uniqueValues([
+          ...existing.konsep,
+          item.konsep
+        ])
+      }
 
       existing.nilai +=
         Number(item.nilai) || 0

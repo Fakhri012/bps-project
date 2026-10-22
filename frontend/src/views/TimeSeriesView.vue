@@ -1484,7 +1484,7 @@ await new Promise(
     class="
       mx-auto
       max-w-[1600px]
-      space-y-4
+      space-y-5
     "
   >
     <!-- =====================================================
@@ -1498,30 +1498,14 @@ await new Promise(
         rounded-2xl
         border
         border-slate-200/80
-        bg-white
+        border-t-4 border-t-teal-600
+        bg-gradient-to-br from-white via-white to-teal-50/60
         px-5
         py-5
-        shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+        shadow-[0_8px_24px_rgba(15,23,42,0.05)]
         lg:px-6
       "
     >
-      <!-- DECORATION -->
-
-      <div
-        class="
-          pointer-events-none
-          absolute
-          -right-20
-          -top-24
-          h-56
-          w-56
-          rounded-full
-          bg-violet-100/60
-          blur-3xl
-        "
-      ></div>
-
-
       <div
         class="
           relative
@@ -1547,15 +1531,15 @@ await new Promise(
               items-center
               gap-2
               rounded-full
-              border border-violet-100
-              bg-violet-50/80
+              border border-teal-100
+              bg-teal-50
               px-3
               py-1.5
             "
           >
             <TrendingUp
               :size="13"
-              class="text-violet-700"
+              class="text-teal-700"
             />
 
             <span
@@ -1564,7 +1548,7 @@ await new Promise(
                 font-bold
                 uppercase
                 tracking-[0.14em]
-                text-violet-700
+                text-teal-800
               "
             >
               Time Series
@@ -1628,10 +1612,10 @@ await new Promise(
               gap-3
               rounded-xl
               border border-slate-200/80
-              bg-white/80
+              bg-white/90
               px-3
               py-2.5
-              shadow-sm
+              shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             "
           >
             <div
@@ -1643,8 +1627,8 @@ await new Promise(
                 items-center
                 justify-center
                 rounded-lg
-                bg-blue-50
-                text-blue-600
+                bg-sky-50
+                text-sky-700
               "
             >
               <CalendarRange
@@ -1703,10 +1687,10 @@ await new Promise(
               gap-3
               rounded-xl
               border border-slate-200/80
-              bg-white/80
+              bg-white/90
               px-3
               py-2.5
-              shadow-sm
+              shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             "
           >
             <div
@@ -1718,8 +1702,8 @@ await new Promise(
                 items-center
                 justify-center
                 rounded-lg
-                bg-violet-50
-                text-violet-600
+                bg-emerald-50
+                text-emerald-700
               "
             >
               <Activity
@@ -1823,7 +1807,7 @@ await new Promise(
         bg-white
         px-4
         py-3
-        shadow-[0_1px_3px_rgba(15,23,42,0.03)]
+        shadow-[0_5px_18px_rgba(15,23,42,0.045)]
         sm:flex-row
         sm:items-center
         sm:justify-between
@@ -2150,7 +2134,7 @@ await new Promise(
           rounded-2xl
           border
           border-slate-200
-          bg-white
+          bg-gradient-to-br from-white to-slate-50
           p-5
         "
       >
@@ -2218,7 +2202,10 @@ await new Promise(
           border
           border-slate-200/80
           bg-white
-          shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+          border-t-2 border-t-sky-500
+          shadow-[0_8px_24px_rgba(15,23,42,0.045)]
+          transition-shadow duration-200
+          hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]
         "
       >
         <!-- HEADER CHART -->
@@ -2243,7 +2230,7 @@ await new Promise(
                 h-2
                 w-2
                 rounded-full
-                bg-blue-500
+                bg-sky-500
               "
             ></span>
 
@@ -2299,12 +2286,12 @@ await new Promise(
               class="
                 w-fit
                 rounded-lg
-                bg-blue-50
+                bg-sky-50
                 px-2.5
                 py-1
                 text-[9px]
                 font-semibold
-                text-blue-600
+                text-sky-700
               "
             >
               {{ annualPeriodCount }}
@@ -2355,7 +2342,10 @@ await new Promise(
           border
           border-slate-200/80
           bg-white
-          shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+          border-t-2 border-t-teal-500
+          shadow-[0_8px_24px_rgba(15,23,42,0.045)]
+          transition-shadow duration-200
+          hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]
         "
       >
         <!-- HEADER CHART -->
@@ -2380,7 +2370,7 @@ await new Promise(
                 h-2
                 w-2
                 rounded-full
-                bg-violet-500
+                bg-teal-500
               "
             ></span>
 
@@ -2436,12 +2426,12 @@ await new Promise(
               class="
                 w-fit
                 rounded-lg
-                bg-violet-50
+                bg-teal-50
                 px-2.5
                 py-1
                 text-[9px]
                 font-semibold
-                text-violet-600
+                text-teal-700
               "
             >
               {{ quarterlyPeriodCount }}

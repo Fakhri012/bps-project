@@ -119,14 +119,14 @@ function buildOption() {
   })
 
   const colors = [
+    '#0f766e',
     '#7c3aed',
     '#2563eb',
-    '#059669',
     '#d97706',
     '#e11d48',
     '#0891b2',
-    '#4f46e5',
-    '#65a30d'
+    '#65a30d',
+    '#c2410c'
   ]
 
   const series =
@@ -152,7 +152,7 @@ function buildOption() {
         showSymbol: labels.length <= 24,
         connectNulls: false,
         lineStyle: {
-          width: 2.5,
+          width: 3,
           color
         },
         itemStyle: {
@@ -170,7 +170,7 @@ function buildOption() {
           }
         },
         areaStyle: {
-          opacity: seriesNames.length > 1 ? 0.03 : 0.16,
+          opacity: seriesNames.length > 1 ? 0.02 : 0.08,
           color
         }
       }
@@ -192,10 +192,10 @@ function buildOption() {
     */
 
     grid: {
-      top: seriesNames.length > 1 ? 48 : 30,
-      right: 24,
+      top: seriesNames.length > 1 ? 52 : 32,
+      right: 28,
       bottom: 50,
-      left: 65,
+      left: 70,
       containLabel: false
     },
 
@@ -203,13 +203,13 @@ function buildOption() {
       show: seriesNames.length > 1,
       type: 'scroll',
       top: 4,
-      left: 65,
+      left: 70,
       right: 16,
       itemWidth: 12,
       itemHeight: 8,
       textStyle: {
         color: '#64748b',
-        fontSize: 10
+        fontSize: 11
       }
     },
 
@@ -346,7 +346,7 @@ axisLabel: {
     '#64748b',
 
   fontSize:
-    9,
+  10,
 
   margin:
     12,
@@ -459,11 +459,11 @@ axisLabel: {
                 '#f8fafc',
 
               fillerColor:
-                'rgba(124, 58, 237, 0.08)',
+                'rgba(15, 118, 110, 0.10)',
 
               handleStyle: {
                 color:
-                  '#7c3aed'
+                  '#0f766e'
               },
 
               textStyle: {

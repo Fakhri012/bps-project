@@ -225,7 +225,7 @@ const option =
         'vertical',
 
       right:
-        '2%',
+        '3%',
 
       top:
         'center',
@@ -247,7 +247,10 @@ const option =
           '#475569',
 
         fontSize:
-          11
+          12,
+
+        fontWeight:
+          500
       }
     },
 
@@ -269,12 +272,12 @@ const option =
         percentPrecision: 2,
 
         radius: [
-          '49%',
-          '70%'
+          '54%',
+          '74%'
         ],
 
         center: [
-          '34%',
+          '38%',
           '50%'
         ],
 
@@ -306,7 +309,7 @@ label: {
 
   color: '#334155',
 
-  fontSize: 11,
+  fontSize: 12,
 
   fontWeight: 600,
 
@@ -363,10 +366,10 @@ label: {
             true,
 
           length:
-            10,
+            12,
 
           length2:
-            7,
+            9,
 
           lineStyle: {
             color:
@@ -425,7 +428,7 @@ label: {
           'group',
 
         left:
-          '34%',
+          '38%',
 
         top:
           'center',

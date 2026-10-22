@@ -39,6 +39,7 @@ const ANALISIS_RASIO_SHEET =
 | J = RINCIAN
 | K = NERACA - RINCIAN
 | L = NILAI
+| M = KONSEP (opsional)
 |
 */
 
@@ -59,7 +60,7 @@ async function getPivotData(
       spreadsheetId,
 
       range:
-        `'${sheetName}'!E:L`
+        `'${sheetName}'!E:M`
     })
 
   const rows =

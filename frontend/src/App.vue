@@ -21,6 +21,9 @@ import TimeSeriesView
 import AnalisisRasioView
   from './views/AnalisisRasioView.vue'
 
+import LandingView
+  from './views/LandingView.vue'
+
 /*
 |--------------------------------------------------------------------------
 | HALAMAN AKTIF
@@ -30,12 +33,43 @@ import AnalisisRasioView
 |
 */
 
+const validMenus = [
+  'Landing',
+  'Dashboard',
+  'Database',
+  'Time Series',
+  'Analisis Rasio'
+]
+
+const savedMenu =
+  localStorage.getItem('activeMenu')
+
 const activeMenu =
   ref(
-    localStorage.getItem(
-      'activeMenu'
-    ) || 'Dashboard'
+    validMenus.includes(savedMenu)
+      ? savedMenu
+      : 'Landing'
   )
+
+const sidebarCollapsed = ref(false)
+const mobileSidebarOpen = ref(false)
+
+function toggleSidebar() {
+  if (window.matchMedia('(min-width: 768px)').matches) {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+    return
+  }
+
+  mobileSidebarOpen.value = !mobileSidebarOpen.value
+}
+
+function closeMobileSidebar() {
+  mobileSidebarOpen.value = false
+}
+
+function expandSidebar() {
+  sidebarCollapsed.value = false
+}
 
 
 /*
@@ -55,6 +89,8 @@ function handleMenuChange(
   activeMenu.value =
     menu
 
+  closeMobileSidebar()
+
   localStorage.setItem(
     'activeMenu',
     menu
@@ -64,11 +100,18 @@ function handleMenuChange(
 
 
 <template>
+  <LandingView
+    v-if="activeMenu === 'Landing'"
+    key="landing"
+    class="page-frame"
+    @select-menu="handleMenuChange"
+  />
+
   <div
-    class="
-      min-h-screen
-      bg-slate-50
-    "
+    v-else
+    key="application"
+    class="application-shell min-h-screen bg-slate-50"
+    :class="{ 'sidebar-collapsed': sidebarCollapsed }"
   >
     <!--
     |--------------------------------------------------------------------------
@@ -80,10 +123,29 @@ function handleMenuChange(
       :active-menu="
         activeMenu
       "
+      :collapsed="sidebarCollapsed"
+      :mobile-open="mobileSidebarOpen"
       @select-menu="
         handleMenuChange
       "
+      @toggle-sidebar="
+        toggleSidebar
+      "
+      @expand-sidebar="
+        expandSidebar
+      "
+      @close-mobile="
+        closeMobileSidebar
+      "
     />
+
+    <button
+      v-if="mobileSidebarOpen"
+      type="button"
+      class="fixed inset-0 z-[35] bg-slate-950/45 md:hidden"
+      aria-label="Tutup navigasi"
+      @click="closeMobileSidebar"
+    ></button>
 
 
     <!--
@@ -97,11 +159,7 @@ function handleMenuChange(
     -->
 
     <div
-      class="
-        ml-16
-        md:ml-64
-        min-h-screen
-      "
+      class="application-content min-h-screen min-w-0"
     >
       <!--
       |--------------------------------------------------------------------------
@@ -109,7 +167,10 @@ function handleMenuChange(
       |--------------------------------------------------------------------------
       -->
 
-      <Header />
+      <Header
+        :mobile-sidebar-open="mobileSidebarOpen"
+        @toggle-sidebar="toggleSidebar"
+      />
 
 
       <!--
@@ -120,6 +181,7 @@ function handleMenuChange(
 
       <main
         class="
+          min-w-0
           min-h-[calc(100vh-64px)]
           p-3
           sm:p-6
@@ -130,60 +192,66 @@ function handleMenuChange(
              DASHBOARD
         ====================================================== -->
 
-        <DashboardView
-          v-if="
-            activeMenu ===
-            'Dashboard'
-          "
-        />
+        <div :key="activeMenu" class="view-frame">
+          <DashboardView
+            v-if="
+              activeMenu ===
+              'Dashboard'
+            "
+            key="dashboard"
+          />
 
 
         <!-- =====================================================
              ASSET DATA
         ====================================================== -->
 
-        <AssetView
-          v-else-if="
-            activeMenu ===
-            'Database'
-          "
-        />
+          <AssetView
+            v-else-if="
+              activeMenu ===
+              'Database'
+            "
+            key="database"
+          />
 
 
         <!-- =====================================================
              TIME SERIES
         ====================================================== -->
 
-        <TimeSeriesView
-          v-else-if="
-            activeMenu ===
-            'Time Series'
-          "
-        />
+          <TimeSeriesView
+            v-else-if="
+              activeMenu ===
+              'Time Series'
+            "
+            key="time-series"
+          />
 <!-- =====================================================
      ANALISIS RASIO
 ====================================================== -->
 
-<AnalisisRasioView
-  v-else-if="
-    activeMenu ===
-    'Analisis Rasio'
-  "
-/>
+          <AnalisisRasioView
+            v-else-if="
+              activeMenu ===
+              'Analisis Rasio'
+            "
+            key="analisis-rasio"
+          />
 
         <!-- =====================================================
              FALLBACK
         ====================================================== -->
 
-        <div
-          v-else
-          class="
-            flex
-            min-h-[420px]
-            items-center
-            justify-center
-          "
-        >
+          <div
+            v-else
+            key="fallback"
+            class="
+              flex
+              min-h-[420px]
+              items-center
+              justify-center
+            "
+          >
           <div
             class="
               max-w-sm
@@ -243,8 +311,70 @@ function handleMenuChange(
               yang dapat ditampilkan.
             </p>
           </div>
+          </div>
         </div>
       </main>
     </div>
   </div>
 </template>
+
+<style>
+.application-content {
+  margin-left: 0;
+  transition: margin-left 300ms ease-in-out;
+}
+
+@media (min-width: 768px) {
+  .application-content {
+    margin-left: 16rem;
+  }
+
+  .application-shell.sidebar-collapsed .application-content {
+    margin-left: 5rem;
+  }
+}
+
+.page-frame {
+  animation: landing-enter 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.view-frame {
+  animation: view-enter 160ms ease-out both;
+}
+
+@keyframes landing-enter {
+  from {
+    opacity: 0.76;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes view-enter {
+  from {
+    transform: translateY(7px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .application-content {
+    transition-duration: 1ms;
+  }
+
+  .page-frame {
+    animation-duration: 1ms;
+  }
+
+  .view-frame {
+    animation-duration: 1ms;
+  }
+}
+</style>

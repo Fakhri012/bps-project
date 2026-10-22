@@ -63,7 +63,8 @@ const backendSummary = ref({
   jumlahBaris: 0,
   totalNilai: 0,
   kontributorTerbesar: null,
-  institusi: []
+  institusi: [],
+  metadata: null
 })
 
 
@@ -628,7 +629,10 @@ async function loadSummary() {
 
       institusi:
         summary.institusi ||
-        []
+        [],
+
+      metadata:
+        summary.metadata || null
     }
 
   } catch (error) {
@@ -658,7 +662,8 @@ async function loadSummary() {
       jumlahBaris: 0,
       totalNilai: 0,
       kontributorTerbesar: null,
-      institusi: []
+      institusi: [],
+      metadata: null
     }
 
   } finally {
@@ -1017,43 +1022,14 @@ const jumlahBaris =
         overflow-hidden
         rounded-2xl
         border border-slate-200/80
-        bg-white
+        border-t-4 border-t-cyan-600
+        bg-gradient-to-br from-white via-white to-cyan-50/60
         px-5
         py-5
-        shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+        shadow-[0_8px_24px_rgba(15,23,42,0.05)]
         lg:px-6
       "
     >
-      <!-- DECORATION -->
-      <div
-        class="
-          pointer-events-none
-          absolute
-          -right-20
-          -top-24
-          h-56
-          w-56
-          rounded-full
-          bg-blue-100/60
-          blur-3xl
-        "
-      ></div>
-
-      <div
-        class="
-          pointer-events-none
-          absolute
-          right-24
-          top-10
-          h-24
-          w-24
-          rounded-full
-          bg-cyan-100/40
-          blur-3xl
-        "
-      ></div>
-
-
       <div
         class="
           relative
@@ -1077,8 +1053,8 @@ const jumlahBaris =
               items-center
               gap-2
               rounded-full
-              border border-blue-100
-              bg-blue-50/80
+              border border-cyan-100
+              bg-cyan-50
               px-3
               py-1.5
             "
@@ -1088,8 +1064,8 @@ const jumlahBaris =
                 h-1.5
                 w-1.5
                 rounded-full
-                bg-blue-600
-                shadow-[0_0_0_3px_rgba(37,99,235,0.12)]
+                bg-cyan-600
+                shadow-[0_0_0_3px_rgba(8,145,178,0.12)]
               "
             ></span>
 
@@ -1099,7 +1075,7 @@ const jumlahBaris =
                 font-bold
                 uppercase
                 tracking-[0.14em]
-                text-blue-700
+                text-cyan-800
               "
             >
               Dashboard Analitik
@@ -1131,8 +1107,7 @@ const jumlahBaris =
               text-slate-500
             "
           >
-            Pantau dan analisis data neraca institusi tahunan
-            maupun triwulanan berdasarkan periode, jenis neraca,
+            Ringkasan dan komposisi neraca sektoral berdasarkan periode, jenis,
             klasifikasi, dan institusi.
           </p>
         </div>
@@ -1355,10 +1330,11 @@ const jumlahBaris =
   class="
     rounded-xl
     border border-slate-200/80
+    border-l-4 border-l-cyan-500
     bg-white
     px-5
     py-4
-    shadow-[0_1px_3px_rgba(15,23,42,0.03)]
+    shadow-[0_4px_16px_rgba(15,23,42,0.04)]
   "
 >
   <div class="min-w-0">
@@ -1379,8 +1355,8 @@ const jumlahBaris =
       class="
         mt-1.5
         max-w-5xl
-        text-xs
-        leading-5
+        text-[13px]
+        leading-6
         text-slate-500
       "
     >
@@ -1388,6 +1364,13 @@ const jumlahBaris =
     </p>
   </div>
 </div>
+
+  <NeracaSummary
+    :total-nilai="totalNilai"
+    :kontributor="kontributorTerbesar"
+    :metadata="backendSummary.metadata"
+    :metadata-loading="summaryLoading"
+  />
 
         <!-- =================================================
              TOP CONTENT
@@ -1409,8 +1392,10 @@ const jumlahBaris =
               rounded-2xl
               border border-slate-200/80
               bg-white
-              shadow-[0_1px_3px_rgba(15,23,42,0.04)]
-              lg:col-span-8
+              shadow-[0_8px_24px_rgba(15,23,42,0.045)]
+              transition-shadow duration-200
+              hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]
+              lg:col-span-12
             "
           >
             <!-- CARD HEADER -->
@@ -1441,7 +1426,7 @@ const jumlahBaris =
                       h-2
                       w-2
                       rounded-full
-                      bg-blue-500
+                      bg-cyan-600
                     "
                   ></span>
 
@@ -1556,10 +1541,12 @@ const jumlahBaris =
             <!-- CHART -->
             <div
               class="
-                h-[255px]
-                px-3
-                pb-4
+                h-[300px]
+                px-2
+                pb-5
                 pt-2
+                sm:h-[340px]
+                sm:px-5
               "
             >
               <DonutChart
@@ -1643,24 +1630,6 @@ const jumlahBaris =
           </div>
 
 
-          <!-- ===============================================
-               SUMMARY / KPI
-          ================================================ -->
-          <div
-            class="
-              min-w-0
-              lg:col-span-4
-            "
-          >
-            <NeracaSummary
-              :total-nilai="
-                totalNilai
-              "
-              :kontributor="
-                kontributorTerbesar
-              "
-            />
-          </div>
         </div>
 
 
@@ -1673,7 +1642,7 @@ const jumlahBaris =
             rounded-2xl
             border border-slate-200/80
             bg-white
-            shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+            shadow-[0_8px_24px_rgba(15,23,42,0.045)]
           "
         >
           <!-- HEADER -->
@@ -1705,7 +1674,7 @@ const jumlahBaris =
                     h-2
                     w-2
                     rounded-full
-                    bg-violet-500
+                    bg-emerald-500
                   "
                 ></span>
 

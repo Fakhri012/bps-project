@@ -688,6 +688,14 @@ institusi.value = [
 */
 
 watch(
+  neraca,
+  () => {
+    klasifikasi.value = []
+  }
+)
+
+
+watch(
   () =>
     createFilterKey(),
 
@@ -769,9 +777,7 @@ onMounted(async () => {
 
 <template>
   <div
-    class="rounded-2xl border
-           border-slate-200
-           bg-white p-5 shadow-sm"
+    class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.045)]"
   >
 
     <!-- HEADER -->
@@ -793,8 +799,7 @@ onMounted(async () => {
 
 
         <p
-          class="mt-1 text-xs
-                 text-slate-400"
+          class="mt-1 text-xs text-slate-500"
         >
           Sesuaikan data yang ditampilkan
         </p>
@@ -810,10 +815,12 @@ onMounted(async () => {
                items-center
                justify-center
                rounded-lg
-               text-slate-400
+               border border-slate-200/80
+               text-slate-500
                transition
-               hover:bg-blue-50
-               hover:text-blue-600"
+               hover:border-cyan-200
+               hover:bg-cyan-50
+               hover:text-cyan-700"
       >
         <RotateCcw
           :size="15"
@@ -856,8 +863,8 @@ onMounted(async () => {
                  transition"
           :class="
             periode === 'tahunan'
-              ? 'border-blue-600 bg-blue-600 text-white'
-              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+              ? 'border-cyan-700 bg-cyan-700 text-white shadow-sm'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50/70'
           "
         >
           Tahunan
@@ -879,8 +886,8 @@ onMounted(async () => {
                  transition"
           :class="
             periode === 'triwulanan'
-              ? 'border-blue-600 bg-blue-600 text-white'
-              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+              ? 'border-cyan-700 bg-cyan-700 text-white shadow-sm'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-200 hover:bg-cyan-50/70'
           "
         >
           Triwulanan
@@ -1019,8 +1026,8 @@ onMounted(async () => {
                    transition"
             :class="
               jenis.includes(item)
-                ? 'border-blue-200 bg-blue-50/60'
-                : 'border-slate-200 bg-white hover:bg-slate-50'
+                ? 'border-cyan-200 bg-cyan-50/70'
+                : 'border-slate-200 bg-white hover:border-cyan-200 hover:bg-cyan-50/40'
             "
           >
 
@@ -1034,7 +1041,7 @@ onMounted(async () => {
                      rounded border"
               :class="
                 jenis.includes(item)
-                  ? 'border-blue-600 bg-blue-600'
+                  ? 'border-cyan-700 bg-cyan-700'
                   : 'border-slate-300 bg-white'
               "
             >
@@ -1082,8 +1089,13 @@ onMounted(async () => {
       <MultiSelectFilter
         v-model="klasifikasi"
         label="Klasifikasi"
-        placeholder="Semua Klasifikasi"
+        :placeholder="
+          neraca.length > 0
+            ? 'Semua Klasifikasi'
+            : 'Pilih neraca terlebih dahulu'
+        "
         :options="klasifikasiOptions"
+        :disabled="neraca.length === 0"
       />
 
 

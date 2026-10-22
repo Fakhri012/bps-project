@@ -406,7 +406,7 @@ function handleLimitChange(limit) {
 <template>
   <section
     class="
-      space-y-5
+    space-y-5
     "
   >
 <!-- =====================================================
@@ -418,28 +418,14 @@ function handleLimitChange(limit) {
     overflow-hidden
     rounded-2xl
     border border-slate-200/80
-    bg-white
+    border-t-4 border-t-teal-600
+    bg-gradient-to-br from-white via-white to-teal-50/60
     px-5
     py-5
-    shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+    shadow-[0_8px_24px_rgba(15,23,42,0.05)]
     lg:px-6
   "
 >
-  <!-- BACKGROUND DECORATION -->
-  <div
-    class="
-      pointer-events-none
-      absolute
-      -right-20
-      -top-24
-      h-56
-      w-56
-      rounded-full
-      bg-cyan-100/60
-      blur-3xl
-    "
-  ></div>
-
   <div
     class="
       relative
@@ -545,7 +531,7 @@ function handleLimitChange(limit) {
       transition-all
       duration-200
       hover:-translate-y-0.5
-      hover:border-blue-200
+      hover:border-teal-200
       hover:shadow-md
     "
   >
@@ -559,10 +545,10 @@ function handleLimitChange(limit) {
         items-center
         justify-center
         rounded-lg
-        bg-blue-50
-        text-blue-600
+        bg-teal-50
+        text-teal-700
         transition
-        group-hover:bg-blue-100
+        group-hover:bg-teal-100
       "
     >
       <CalendarRange
@@ -716,10 +702,11 @@ function handleLimitChange(limit) {
     <div
       class="
         rounded-2xl
-        border border-slate-200
+        border border-slate-200/80
+        border-t-2 border-t-cyan-500
         bg-white
         p-4
-        shadow-sm
+        shadow-[0_6px_20px_rgba(15,23,42,0.045)]
       "
     >
       <div
@@ -734,7 +721,7 @@ function handleLimitChange(limit) {
             left-4
             top-1/2
             -translate-y-1/2
-            text-slate-400
+            text-teal-600
           "
         />
 
@@ -755,10 +742,10 @@ function handleLimitChange(limit) {
             outline-none
             transition
             placeholder:text-slate-400
-            focus:border-blue-400
+            focus:border-teal-500
             focus:bg-white
             focus:ring-2
-            focus:ring-blue-100
+            focus:ring-teal-100
           "
           @input="
             handleSearchInput

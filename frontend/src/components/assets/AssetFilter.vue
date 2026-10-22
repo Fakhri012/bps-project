@@ -712,8 +712,9 @@ onMounted(async () => {
     class="
       rounded-xl
       border border-slate-200/80
+      border-t-2 border-t-teal-500
       bg-white
-      shadow-[0_1px_3px_rgba(15,23,42,0.04)]
+      shadow-[0_8px_24px_rgba(15,23,42,0.045)]
     "
   >
     <!-- =====================================================
@@ -749,8 +750,8 @@ onMounted(async () => {
             items-center
             justify-center
             rounded-lg
-            bg-blue-50
-            text-blue-600
+            bg-teal-50
+            text-teal-700
           "
         >
           <SlidersHorizontal
@@ -784,7 +785,7 @@ onMounted(async () => {
                 items-center
                 justify-center
                 rounded-full
-                bg-blue-600
+                bg-teal-700
                 px-1.5
                 py-0.5
                 text-[9px]
@@ -816,7 +817,7 @@ onMounted(async () => {
                 inline-flex
                 items-center
                 gap-1
-                text-blue-500
+                text-teal-600
               "
             >
               ·
@@ -863,7 +864,7 @@ onMounted(async () => {
               periode === 'tahunan'
                 ? `
                     bg-white
-                    text-blue-600
+                    text-teal-700
                     shadow-sm
                   `
                 : `
@@ -895,7 +896,7 @@ onMounted(async () => {
               periode === 'triwulanan'
                 ? `
                     bg-white
-                    text-blue-600
+                    text-teal-700
                     shadow-sm
                   `
                 : `
@@ -1019,15 +1020,15 @@ onMounted(async () => {
               items-center
               gap-1
               rounded-md
-              border border-blue-100
-              bg-blue-50
+              border border-teal-100
+              bg-teal-50
               px-2
               py-1
               text-[10px]
               font-medium
-              text-blue-700
+              text-teal-800
               transition
-              hover:bg-blue-100
+              hover:bg-teal-100
             "
             @click="
               removeChip(chip)
@@ -1035,7 +1036,7 @@ onMounted(async () => {
           >
             <span
               class="
-                text-blue-400
+                text-teal-500
               "
             >
               {{ chip.groupLabel }}
@@ -1058,8 +1059,8 @@ onMounted(async () => {
               :size="10"
               class="
                 ml-0.5
-                text-blue-400
-                group-hover:text-blue-700
+                text-teal-500
+                group-hover:text-teal-800
               "
             />
           </button>

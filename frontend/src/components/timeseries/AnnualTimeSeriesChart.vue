@@ -115,14 +115,14 @@ function buildOption() {
   })
 
   const colors = [
+    '#0f766e',
     '#2563eb',
-    '#7c3aed',
-    '#059669',
     '#d97706',
     '#e11d48',
+    '#7c3aed',
+    '#65a30d',
     '#0891b2',
-    '#4f46e5',
-    '#65a30d'
+    '#c2410c'
   ]
 
   const series =
@@ -148,7 +148,7 @@ function buildOption() {
         showSymbol: true,
         connectNulls: false,
         lineStyle: {
-          width: 3,
+          width: 3.5,
           color
         },
         itemStyle: {
@@ -166,7 +166,7 @@ function buildOption() {
           }
         },
         areaStyle: {
-          opacity: seriesNames.length > 1 ? 0.04 : 0.18,
+          opacity: seriesNames.length > 1 ? 0.025 : 0.09,
           color
         }
       }
@@ -188,10 +188,10 @@ function buildOption() {
     */
 
     grid: {
-      top: seriesNames.length > 1 ? 48 : 30,
-      right: 24,
-      bottom: 34,
-      left: 65,
+      top: seriesNames.length > 1 ? 52 : 32,
+      right: 28,
+      bottom: 40,
+      left: 70,
       containLabel: false
     },
 
@@ -201,11 +201,11 @@ function buildOption() {
       top: 4,
       left: 65,
       right: 16,
-      itemWidth: 12,
-      itemHeight: 8,
+      itemWidth: 14,
+      itemHeight: 9,
       textStyle: {
         color: '#64748b',
-        fontSize: 10
+        fontSize: 11
       }
     },
 

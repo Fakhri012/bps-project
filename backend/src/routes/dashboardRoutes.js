@@ -26,6 +26,7 @@ const {
 
   getTriwulananSummary,
   getTahunanSummary,
+  getLandingOverview,
 
 
   /*
@@ -110,6 +111,12 @@ router.get(
 router.get(
   '/summary/triwulanan',
   getTriwulananSummary
+)
+
+
+router.get(
+  '/overview',
+  getLandingOverview
 )
 
 

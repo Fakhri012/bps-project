@@ -14,6 +14,8 @@ google-service-account.json
 # Build output
 dist/
 **/dist/
+coverage/
+**/coverage/
 
 # Logs
 *.log

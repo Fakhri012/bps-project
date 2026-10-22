@@ -145,10 +145,10 @@ const option = computed(() => ({
   */
 
   grid: {
-    left: 20,
-    right: 35,
-    top: 10,
-    bottom: 25,
+    left: 24,
+    right: 44,
+    top: 12,
+    bottom: 30,
     containLabel: true
   },
 
@@ -171,8 +171,8 @@ const option = computed(() => ({
     },
 
     axisLabel: {
-      color: '#94a3b8',
-      fontSize: 10,
+      color: '#64748b',
+      fontSize: 11,
 
 formatter: value => {
   return new Intl.NumberFormat(
@@ -192,7 +192,7 @@ formatter: value => {
 
       lineStyle: {
         type: 'dashed',
-        color: '#e2e8f0',
+        color: '#e8edf3',
         width: 1
       }
     }
@@ -222,9 +222,9 @@ formatter: value => {
     },
 
     axisLabel: {
-      color: '#475569',
-      fontSize: 11,
-      fontWeight: 500,
+      color: '#334155',
+      fontSize: 12,
+      fontWeight: 600,
 
       width: 145,
       overflow: 'break',
@@ -248,7 +248,7 @@ formatter: value => {
 
       type: 'bar',
 
-      barWidth: 38,
+      barWidth: 26,
 
 
       /*
@@ -341,8 +341,10 @@ data:
 
           borderRadius:
             item.value >= 0
-              ? [0, 5, 5, 0]
-              : [5, 0, 0, 5]
+              ? [0, 8, 8, 0]
+              : [8, 0, 0, 8],
+
+          opacity: 0.92
         },
 
         /*
@@ -363,7 +365,7 @@ data:
             labelColor,
 
           fontSize:
-            10,
+            11,
 
           fontWeight:
             600,

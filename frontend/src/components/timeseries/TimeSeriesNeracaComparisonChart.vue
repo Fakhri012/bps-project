@@ -106,13 +106,13 @@ const chartRefs = new Map()
 const chartInstances = new Map()
 
 const colors = [
+  '#0f766e',
   '#2563eb',
-  '#059669',
   '#d97706',
   '#e11d48',
-  '#0891b2',
   '#7c3aed',
   '#65a30d',
+  '#0891b2',
   '#c2410c',
   '#db2777'
 ]
@@ -169,19 +169,21 @@ function buildOption(panel) {
       smooth: 0.25,
       showSymbol: true,
       symbol: 'circle',
-      symbolSize: 6,
+      symbolSize: 7,
       connectNulls: false,
       lineStyle: {
-        width: 2.5,
+        width: 3,
         color
       },
       itemStyle: {
-        color
+        color: '#ffffff',
+        borderColor: color,
+        borderWidth: 2
       },
       emphasis: {
         focus: 'series',
         lineStyle: {
-          width: 3.5
+          width: 4
         }
       }
     }
@@ -237,15 +239,15 @@ function buildOption(panel) {
       data: panel.periods,
       axisLine: {
         lineStyle: {
-          color: '#e2e8f0'
+          color: '#dbe4ec'
         }
       },
       axisTick: {
         show: false
       },
       axisLabel: {
-        color: '#94a3b8',
-        fontSize: 10,
+        color: '#64748b',
+        fontSize: 11,
         hideOverlap: true
       },
       splitLine: {
@@ -262,8 +264,13 @@ function buildOption(panel) {
       },
       axisLabel: {
         color: '#475569',
-        fontSize: 10,
+        fontSize: 11,
         formatter: formatTimeSeriesAxis
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#e8edf3'
+        }
       }
     },
     legend: {
@@ -274,7 +281,7 @@ function buildOption(panel) {
       data: panel.series.map(item => item.name),
       textStyle: {
         color: '#64748b',
-        fontSize: 10
+        fontSize: 11
       }
     },
     dataZoom: isQuarterly
@@ -295,11 +302,11 @@ function buildOption(panel) {
             bottom: 6,
             showDetail: false,
             brushSelect: false,
-            borderColor: '#e2e8f0',
-            backgroundColor: '#f8fafc',
-            fillerColor: 'rgba(37, 99, 235, 0.10)',
+            borderColor: '#dbe4ec',
+            backgroundColor: '#f1f5f9',
+            fillerColor: 'rgba(15, 118, 110, 0.10)',
             handleStyle: {
-              color: '#2563eb'
+              color: '#0f766e'
             },
             dataBackground: {
               lineStyle: {
@@ -405,10 +412,10 @@ onBeforeUnmount(() => {
       <section
         v-for="panel in panels"
         :key="panel.key"
-        class="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.03)]"
+        class="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 border-t-2 border-t-teal-500 bg-white shadow-[0_6px_20px_rgba(15,23,42,0.045)] transition-shadow duration-200 hover:shadow-md"
       >
         <header class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
-          <h3 class="min-w-0 truncate text-sm font-bold text-slate-800">
+          <h3 class="min-w-0 truncate border-l-2 border-l-teal-500 pl-2 text-sm font-bold text-slate-800">
             {{ panel.sektor }}
           </h3>
 
@@ -421,7 +428,7 @@ onBeforeUnmount(() => {
               type="button"
               class="rounded px-2 py-1 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               :class="panel.frequency === 'annual'
-                ? 'bg-white text-blue-700 shadow-sm'
+                ? 'bg-white text-teal-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'"
               :aria-pressed="panel.frequency === 'annual'"
               :disabled="loading"
@@ -433,7 +440,7 @@ onBeforeUnmount(() => {
               type="button"
               class="rounded px-2 py-1 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               :class="panel.frequency === 'quarterly'
-                ? 'bg-white text-teal-700 shadow-sm'
+                ? 'bg-white text-cyan-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'"
               :aria-pressed="panel.frequency === 'quarterly'"
               :disabled="loading"
@@ -444,7 +451,7 @@ onBeforeUnmount(() => {
           </div>
         </header>
 
-        <div class="h-[300px] min-w-0 w-full px-2 py-2">
+        <div class="h-[320px] min-w-0 w-full px-2 py-2 sm:h-[340px]">
           <div
             v-if="loading"
             class="flex h-full items-center justify-center text-xs text-slate-400"

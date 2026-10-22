@@ -471,10 +471,11 @@ function resetFilters() {
     class="
       rounded-2xl
       border
-      border-slate-200
+      border-slate-200/80
+      border-l-4 border-l-teal-500
       bg-white
       p-5
-      shadow-sm
+      shadow-[0_5px_18px_rgba(15,23,42,0.045)]
     "
   >
     <div

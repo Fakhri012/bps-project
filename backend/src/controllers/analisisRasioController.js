@@ -2,6 +2,10 @@ const {
   getAnalisisRasioData
 } = require('../services/googleSheetsService')
 
+const {
+  sendInternalServerError
+} = require('../utils/httpErrors')
+
 
 /*
 |--------------------------------------------------------------------------
@@ -23,18 +27,12 @@ async function getAnalisisRasio(
     })
 
   } catch (error) {
-    console.error(
-      'Error getAnalisisRasio:',
+    return sendInternalServerError(
+      res,
+      'Analisis rasio',
+      'Gagal mengambil data analisis rasio',
       error
     )
-
-    res.status(500).json({
-      success: false,
-      message:
-        'Gagal mengambil data analisis rasio',
-      error:
-        error.message
-    })
   }
 }
 

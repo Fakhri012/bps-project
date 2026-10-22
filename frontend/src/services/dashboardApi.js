@@ -176,6 +176,16 @@ export async function getTriwulananSummary(
 }
 
 
+export async function getLandingOverview() {
+  const response =
+    await api.get(
+      '/overview'
+    )
+
+  return response.data
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | PREVIEW TAHUNAN
