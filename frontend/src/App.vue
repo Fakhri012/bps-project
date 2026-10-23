@@ -321,7 +321,8 @@ function handleMenuChange(
 <style>
 .application-content {
   margin-left: 0;
-  transition: margin-left 300ms ease-in-out;
+  transition: margin-left 450ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: margin-left;
 }
 
 @media (min-width: 768px) {

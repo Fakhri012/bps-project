@@ -18,8 +18,8 @@ import {
 } from 'lucide-vue-next'
 
 import {
-  formatDatabaseNumber
-} from '../../utils/chartFormatters.js'
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
 
 
 /*
@@ -92,12 +92,12 @@ function formatNilai(value) {
     return String(value)
   }
 
-  return formatDatabaseNumber(number)
+  return formatDisplayNumber(number)
 }
 
 
 function formatTotal(value) {
-  return formatDatabaseNumber(Number(value) || 0)
+  return formatDisplayNumber(Number(value) || 0)
 }
 
 
@@ -720,7 +720,7 @@ function getNilaiClass(value) {
                 text-slate-600
               "
             >
-              {{ pagination.from }}
+              {{ formatDisplayNumber(pagination.from) }}
             </span>
 
             –
@@ -731,7 +731,7 @@ function getNilaiClass(value) {
                 text-slate-600
               "
             >
-              {{ pagination.to }}
+              {{ formatDisplayNumber(pagination.to) }}
             </span>
 
             dari
@@ -1667,7 +1667,7 @@ function getNilaiClass(value) {
         text-slate-700
       "
     >
-      {{ pagination.page }}
+      {{ formatDisplayNumber(pagination.page) }}
     </span>
 
     dari
@@ -1679,8 +1679,7 @@ function getNilaiClass(value) {
       "
     >
       {{
-        pagination.totalPages ||
-        0
+        formatDisplayNumber(pagination.totalPages || 0)
       }}
     </span>
   </p>
@@ -1911,7 +1910,7 @@ function getNilaiClass(value) {
               goToPage(p)
             "
           >
-            {{ p }}
+            {{ formatDisplayNumber(p) }}
           </button>
         </template>
 

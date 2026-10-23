@@ -377,3 +377,76 @@ test('returns distinct metadata only for rows matching dashboard filters', () =>
     }
   )
 })
+
+test('preserves source order and first occurrence in filter options', () => {
+  const annualRows = [
+    {
+      sektor: 'HH',
+      institusi: 'Rumah Tangga',
+      tahun: 2024,
+      sisi: 'SUMBER',
+      jenisNeraca: 'Z Neraca',
+      rincian: 'Z Rincian'
+    },
+    {
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      tahun: 2023,
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'A Neraca',
+      rincian: 'A Rincian'
+    },
+    {
+      sektor: 'HH',
+      institusi: 'Rumah Tangga',
+      tahun: 2024,
+      sisi: 'SUMBER',
+      jenisNeraca: 'Z Neraca',
+      rincian: 'Z Rincian'
+    }
+  ]
+
+  const annualFilters =
+    mapper.generateTahunanFilters(
+      annualRows,
+      {}
+    )
+
+  assert.deepEqual(annualFilters, {
+    tahun: [2024, 2023],
+    sisi: ['SUMBER', 'PENGGUNAAN'],
+    neraca: ['Z Neraca', 'A Neraca'],
+    klasifikasi: ['Z Rincian', 'A Rincian'],
+    institusi: [
+      { kode: 'HH', nama: 'Rumah Tangga' },
+      { kode: 'FC', nama: 'Korporasi Finansial' }
+    ]
+  })
+
+  const quarterlyRows = annualRows.map((item, index) => ({
+    ...item,
+    tahun: index === 1 ? 2023 : 2024,
+    triwulan: index === 1 ? 1 : 2
+  }))
+
+  assert.deepEqual(
+    mapper.generateTriwulananFilters(
+      quarterlyRows,
+      {}
+    ),
+    {
+      tahun: [2024, 2023],
+      triwulan: [
+        { value: 2, label: 'Q2' },
+        { value: 1, label: 'Q1' }
+      ],
+      sisi: ['SUMBER', 'PENGGUNAAN'],
+      neraca: ['Z Neraca', 'A Neraca'],
+      klasifikasi: ['Z Rincian', 'A Rincian'],
+      institusi: [
+        { kode: 'HH', nama: 'Rumah Tangga' },
+        { kode: 'FC', nama: 'Korporasi Finansial' }
+      ]
+    }
+  )
+})

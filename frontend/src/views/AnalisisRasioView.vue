@@ -2,7 +2,9 @@
 import {
   computed,
   onMounted,
+  nextTick,
   ref,
+  toRef,
   watch
 } from 'vue'
 
@@ -20,6 +22,9 @@ import {
 import MultiSelectFilter
   from '../components/dashboard/MultiSelectFilter.vue'
 
+import ExportActions
+  from '../components/ExportActions.vue'
+
 import { use } from 'echarts/core'
 
 import { LineChart } from 'echarts/charts'
@@ -36,6 +41,26 @@ import { CanvasRenderer } from 'echarts/renderers'
 import {
   getAnalisisRasio
 } from '../services/dashboardApi'
+
+import {
+  clearSharedFilter,
+  setSharedFilter,
+  usePersistentFilterState
+} from '../composables/filterState.js'
+
+import {
+  formatDisplayNumber
+} from '../utils/displayFormatters.js'
+
+import {
+  prioritizeSectorOptions
+} from '../utils/dashboardText.js'
+
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  exportChartsPdf
+} from '../utils/reportExport.js'
 
 
 use([
@@ -58,6 +83,8 @@ const data = ref([])
 
 const loading = ref(false)
 
+const exportingRatioPdf = ref(false)
+
 const error = ref('')
 
 /*
@@ -66,13 +93,24 @@ const error = ref('')
 |--------------------------------------------------------------------------
 */
 
-const selectedSektor = ref([])
+const {
+  state: savedFilters,
+  sharedFilters
+} =
+  usePersistentFilterState('analisisRasio', {
+    sektor: [],
+    periode: [],
+    jenisRasio: [],
+    tableSearch: ''
+  })
+
+const selectedSektor = toRef(savedFilters, 'sektor')
 
 const isSektorOpen = ref(false)
 
-const selectedPeriode = ref([])
+const selectedPeriode = toRef(savedFilters, 'periode')
 
-const selectedJenisRasio = ref([])
+const selectedJenisRasio = toRef(savedFilters, 'jenisRasio')
 
 const ratioChartModes = ref({})
 
@@ -91,7 +129,7 @@ const activeFilterCount = computed(() =>
 
 const currentPage = ref(1)
 
-const tableSearch = ref('')
+const tableSearch = toRef(savedFilters, 'tableSearch')
 
 const itemsPerPage = ref(10)
 
@@ -334,6 +372,14 @@ function numericValue(value) {
 
 }
 
+function formatRatioValue(value) {
+  const number = numericValue(value)
+
+  return number === null
+    ? value ?? '-'
+    : formatDisplayNumber(number)
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -343,7 +389,7 @@ function numericValue(value) {
 
 const sektorOptions = computed(() => {
 
-  return [
+  return prioritizeSectorOptions([
     ...new Set(
       data.value
         .map(
@@ -351,7 +397,7 @@ const sektorOptions = computed(() => {
         )
         .filter(Boolean)
     )
-  ]
+  ])
 
 })
 
@@ -373,18 +419,137 @@ const periodeOptions = computed(() => {
         )
         .filter(Boolean)
     )
-  ].sort(
-    (a, b) =>
-      String(a).localeCompare(
-        String(b),
-        undefined,
-        {
-          numeric: true
-        }
-      )
-  )
+  ]
 
 })
+
+const isApplyingSharedPeriods = ref(false)
+
+watch(
+  selectedPeriode,
+  periods => {
+    if (isApplyingSharedPeriods.value) {
+      return
+    }
+
+    const values = periods.map(String)
+    const annualPeriods = values.filter(isAnnual)
+    const quarterlyPeriods = values.filter(isQuarterly)
+
+    if (annualPeriods.length > 0 && quarterlyPeriods.length > 0) {
+      return
+    }
+
+    if (values.length === 0) {
+      clearSharedFilter('periode')
+      setSharedFilter('tahun', [])
+      setSharedFilter('triwulan', [])
+      return
+    }
+
+    const years = [
+      ...new Set(
+        values.map(period =>
+          period.split('/Q')[0]
+        )
+      )
+    ]
+
+    setSharedFilter(
+      'periode',
+      quarterlyPeriods.length > 0
+        ? 'triwulanan'
+        : 'tahunan'
+    )
+    setSharedFilter('tahun', years)
+    setSharedFilter(
+      'triwulan',
+      quarterlyPeriods.length > 0
+        ? [...new Set(
+            quarterlyPeriods.map(period =>
+              `Q${period.split('/Q')[1]}`
+            )
+          )]
+        : []
+    )
+  },
+  {
+    deep: true,
+    flush: 'sync'
+  }
+)
+
+watch(
+  () => [
+    sharedFilters.periode,
+    sharedFilters.tahun,
+    sharedFilters.triwulan,
+    periodeOptions.value
+  ],
+  () => {
+    const hasSharedPeriod =
+      Object.hasOwn(sharedFilters, 'periode') ||
+      Object.hasOwn(sharedFilters, 'tahun') ||
+      Object.hasOwn(sharedFilters, 'triwulan')
+
+    if (!hasSharedPeriod) {
+      return
+    }
+
+    const years = Array.isArray(sharedFilters.tahun)
+      ? sharedFilters.tahun.map(String)
+      : []
+    const quarters = new Set(
+      (Array.isArray(sharedFilters.triwulan)
+        ? sharedFilters.triwulan
+        : []
+      ).map(value =>
+        String(value).replace(/^Q/i, '')
+      )
+    )
+    const quarterly =
+      sharedFilters.periode === 'triwulanan'
+    let periods = []
+
+    if (quarterly) {
+      periods = periodeOptions.value
+        .map(String)
+        .filter(period => {
+          if (!isQuarterly(period)) {
+            return false
+          }
+
+          const [year, quarter] = period.split('/Q')
+          return (
+            (years.length === 0 || years.includes(year)) &&
+            (quarters.size === 0 || quarters.has(quarter))
+          )
+        })
+    } else if (years.length > 0) {
+      periods = years
+    } else if (sharedFilters.periode === 'tahunan') {
+      periods = periodeOptions.value
+        .map(String)
+        .filter(isAnnual)
+    }
+
+    const currentPeriods = selectedPeriode.value.map(String)
+    if (
+      JSON.stringify(currentPeriods) ===
+      JSON.stringify(periods)
+    ) {
+      return
+    }
+
+    isApplyingSharedPeriods.value = true
+    selectedPeriode.value = periods
+    isApplyingSharedPeriods.value = false
+  },
+  {
+    deep: true,
+    immediate: true
+  }
+)
 
 
 /*
@@ -1705,6 +1870,78 @@ const charts = computed(() => {
 
 })
 
+function getRatioExportContext() {
+  return {
+    mode: 'rasio',
+    period: selectedPeriode.value.length > 0
+      ? selectedPeriode.value.join('_')
+      : 'semua-periode',
+    filters: {
+      Sektor: selectedSektor.value,
+      Periode: selectedPeriode.value,
+      JenisRasio: selectedJenisRasio.value,
+      Pencarian: tableSearch.value
+    }
+  }
+}
+
+function downloadAnalysisCsv() {
+  const ratios = tableRatioTypes.value
+  const rows = sortedTable.value.map(row => [
+    row.periode,
+    row.sektor,
+    ...ratios.map(ratio => row.values[ratio] ?? '')
+  ])
+
+  if (rows.length === 0) {
+    alert('Tidak ada baris tabel yang sesuai untuk diekspor.')
+    return
+  }
+
+  const context = getRatioExportContext()
+  downloadCsvFile(
+    buildExportFilename({
+      page: 'analisis-rasio',
+      ...context,
+      extension: 'csv'
+    }),
+    ['Periode', 'Sektor', ...ratios],
+    rows
+  )
+}
+
+async function downloadAnalysisPdf() {
+  if (exportingRatioPdf.value) {
+    return
+  }
+
+  const context = getRatioExportContext()
+  exportingRatioPdf.value = true
+
+  try {
+    await nextTick()
+    const chartElements = document.querySelectorAll('[data-pdf-chart="ratio"]')
+
+    await exportChartsPdf({
+      filename: buildExportFilename({
+        page: 'analisis-rasio',
+        ...context,
+        extension: 'pdf'
+      }),
+      reportTitle: 'BPS - Analisis Rasio',
+      mode: context.mode,
+      period: context.period,
+      filters: context.filters,
+      chartElements
+    })
+  } catch (exportError) {
+    console.error('Gagal mengekspor PDF Analisis Rasio:', exportError)
+    alert(exportError?.message || 'Gagal membuat PDF Analisis Rasio.')
+  } finally {
+    exportingRatioPdf.value = false
+  }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1761,43 +1998,30 @@ onMounted(() => {
         px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] lg:px-6
       "
     >
-      <div class="relative flex flex-col gap-1">
+      <div class="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
+            Statistik Ekonomi
+          </p>
 
-        <p
-          class="
-            text-xs
-            font-semibold
-            uppercase
-            tracking-[0.18em]
-            text-teal-700
-          "
-        >
-          Statistik Ekonomi
-        </p>
+          <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            Analisis Rasio
+          </h1>
 
-        <h1
-          class="
-            text-2xl
-            font-bold
-            tracking-tight
-            text-slate-900
-          "
-        >
-          Analisis Rasio
-        </h1>
+          <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+            Menampilkan perkembangan rasio ekonomi sektoral
+            berdasarkan data tahunan dan triwulanan.
+          </p>
+        </div>
 
-        <p
-          class="
-            max-w-3xl
-            text-sm
-            leading-6
-            text-slate-500
-          "
-        >
-          Menampilkan perkembangan rasio ekonomi sektoral
-          berdasarkan data tahunan dan triwulanan.
-        </p>
-
+        <ExportActions
+          class="shrink-0"
+          :csv-disabled="loading || searchedTable.length === 0"
+          :pdf-disabled="loading || !charts.some(chart => chart.hasData)"
+          :pdf-busy="exportingRatioPdf"
+          @csv="downloadAnalysisCsv"
+          @pdf="downloadAnalysisPdf"
+        />
       </div>
     </section>
 
@@ -1866,7 +2090,7 @@ onMounted(() => {
             v-if="activeFilterCount > 0"
             class="rounded-full bg-teal-50 px-2 py-0.5 text-[9px] font-bold text-teal-800"
           >
-            {{ activeFilterCount }} aktif
+            {{ formatDisplayNumber(activeFilterCount) }} aktif
           </span>
         </div>
 
@@ -2647,7 +2871,7 @@ onMounted(() => {
           <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
             <p class="text-[10px] font-semibold uppercase text-slate-400">Sektor</p>
             <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">
-              {{ summaryMetrics.sectors }}
+              {{ formatDisplayNumber(summaryMetrics.sectors) }}
             </p>
           </div>
           <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
@@ -2774,6 +2998,8 @@ onMounted(() => {
 
         <div
           v-if="chart.hasData"
+          data-pdf-chart="ratio"
+          :data-pdf-title="`Grafik ${chart.ratio} - ${chart.periodLabel}`"
           class="h-[350px] min-w-0 p-3 sm:p-5"
         >
 
@@ -3196,7 +3422,7 @@ onMounted(() => {
                         ? 'text-rose-600'
                         : 'text-slate-600'"
                 >
-                  {{ row.values[ratio] ?? '-' }}
+                  {{ formatRatioValue(row.values[ratio]) }}
                 </td>
 
               </tr>

@@ -10,7 +10,7 @@ export function formatDatabaseNumber(value) {
   if (/[eE]/.test(decimal)) {
     return new Intl.NumberFormat(
       'id-ID',
-      { maximumFractionDigits: 100 }
+      { maximumSignificantDigits: 21 }
     ).format(number)
   }
 
@@ -41,19 +41,8 @@ export function formatTimeSeriesAxis(value) {
     Number(value)
 
   if (!Number.isFinite(number)) {
-    return '0,00 T'
+    return '0'
   }
 
-  const trillion =
-    number / 1000000
-
-  return (
-    trillion.toLocaleString(
-      'id-ID',
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }
-    ) + ' T'
-  )
+  return formatTimeSeriesNumber(number)
 }

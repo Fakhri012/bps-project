@@ -13,8 +13,8 @@ import {
 } from 'lucide-vue-next'
 
 import {
-  formatDatabaseNumber
-} from '../../utils/chartFormatters.js'
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
 
 /* =========================================================
    PROPS
@@ -75,7 +75,7 @@ function toNumber(value) {
 }
 
 function formatNumber(value) {
-  return formatDatabaseNumber(toNumber(value))
+  return formatDisplayNumber(toNumber(value))
 }
 
 function calculateAchievement(item) {
@@ -91,7 +91,7 @@ function calculateAchievement(item) {
   return (
     (realization / target) *
     100
-  ).toFixed(1)
+  )
 }
 
 /* =========================================================
@@ -601,8 +601,8 @@ function exportCSV() {
                        text-slate-700"
               >
                 {{
-                  calculateAchievement(
-                    item
+                  formatDisplayNumber(
+                    calculateAchievement(item)
                   )
                 }}%
               </span>
@@ -695,11 +695,11 @@ function exportCSV() {
                  text-slate-500"
         >
           Menampilkan
-          {{ startItem }}
+          {{ formatDisplayNumber(startItem) }}
           –
-          {{ endItem }}
+          {{ formatDisplayNumber(endItem) }}
           dari
-          {{ filteredData.length }}
+          {{ formatDisplayNumber(filteredData.length) }}
           data
         </p>
 
@@ -708,9 +708,9 @@ function exportCSV() {
                  text-slate-400"
         >
           Halaman
-          {{ currentPage }}
+          {{ formatDisplayNumber(currentPage) }}
           dari
-          {{ totalPages }}
+          {{ formatDisplayNumber(totalPages) }}
         </p>
 
       </div>
@@ -739,7 +739,7 @@ function exportCSV() {
                  font-semibold
                  text-blue-600"
         >
-          {{ currentPage }}
+          {{ formatDisplayNumber(currentPage) }}
         </div>
 
         <button

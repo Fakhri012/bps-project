@@ -157,8 +157,10 @@ function selectMenu(
       text-white
       shadow-[8px_0_32px_rgba(2,12,18,0.22)]
       transition-[width,transform]
-      duration-300
-      ease-in-out
+      duration-[450ms]
+      ease-[cubic-bezier(0.22,1,0.36,1)]
+      will-change-[width,transform]
+      motion-reduce:duration-[1ms]
     "
     :style="{ width: mobileOpen || !collapsed ? '16rem' : '5rem' }"
     :class="[
@@ -311,8 +313,8 @@ function selectMenu(
 
         <!-- BRAND -->
         <div
-          class="min-w-0"
-          :class="mobileOpen ? 'block' : collapsed ? 'hidden' : 'hidden md:block'"
+          class="min-w-0 overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-[1ms]"
+          :class="mobileOpen || !collapsed ? 'max-w-48 translate-x-0 opacity-100' : 'max-w-0 -translate-x-1 opacity-0'"
         >
           <h1
             class="
@@ -490,7 +492,9 @@ function selectMenu(
             text-sm
             font-medium
             transition-all
-            duration-200
+            duration-[450ms]
+            ease-[cubic-bezier(0.22,1,0.36,1)]
+            motion-reduce:duration-[1ms]
           "
           :class="[
             activeMenu === menu.name
@@ -552,8 +556,8 @@ function selectMenu(
 
           <!-- NAME -->
           <span
-            class="sr-only"
-            :class="mobileOpen ? 'not-sr-only flex-1' : collapsed ? 'md:sr-only' : 'md:not-sr-only md:flex-1'"
+            class="min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-[1ms]"
+            :class="mobileOpen || !collapsed ? 'max-w-48 translate-x-0 opacity-100' : 'max-w-0 -translate-x-1 opacity-0 pointer-events-none'"
           >
             {{ menu.label || menu.name }}
           </span>

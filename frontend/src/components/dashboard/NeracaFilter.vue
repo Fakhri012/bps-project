@@ -1,6 +1,7 @@
 <script setup>
 import {
   ref,
+  toRef,
   watch,
   onMounted
 } from 'vue'
@@ -20,8 +21,14 @@ import {
 } from '../../services/dashboardApi'
 
 import {
-  normalizeDisplayText
+  normalizeDisplayText,
+  formatNeracaOptionLabel,
+  prioritizeSectorOptions
 } from '../../utils/dashboardText.js'
+
+import {
+  usePersistentFilterState
+} from '../../composables/filterState.js'
 
 
 /*
@@ -41,20 +48,6 @@ const emit = defineEmits([
 |--------------------------------------------------------------------------
 */
 
-const periode = ref('tahunan')
-
-
-/*
-|--------------------------------------------------------------------------
-| FILTER TERPILIH
-|--------------------------------------------------------------------------
-*/
-
-const jenis = ref([])
-const tahun = ref([])
-const triwulan = ref([])
-const neraca = ref([])
-const klasifikasi = ref([])
 const defaultInstitusi = [
   'FC',
   'NFC',
@@ -64,9 +57,31 @@ const defaultInstitusi = [
   'ROW'
 ]
 
-const institusi = ref([
-  ...defaultInstitusi
-])
+const { state: savedFilters } =
+  usePersistentFilterState('dashboard', {
+    periode: 'tahunan',
+    jenis: [],
+    tahun: [],
+    triwulan: [],
+    neraca: [],
+    klasifikasi: [],
+    institusi: [...defaultInstitusi]
+  }, {
+    periode: 'periode',
+    jenis: 'jenis',
+    tahun: 'tahun',
+    triwulan: 'triwulan',
+    neraca: 'neraca',
+    klasifikasi: 'klasifikasi'
+  })
+
+const periode = toRef(savedFilters, 'periode')
+const jenis = toRef(savedFilters, 'jenis')
+const tahun = toRef(savedFilters, 'tahun')
+const triwulan = toRef(savedFilters, 'triwulan')
+const neraca = toRef(savedFilters, 'neraca')
+const klasifikasi = toRef(savedFilters, 'klasifikasi')
+const institusi = toRef(savedFilters, 'institusi')
 
 /*
 |--------------------------------------------------------------------------
@@ -566,7 +581,10 @@ async function loadFilterOptions() {
     neracaOptions.value =
       normalizeTextOptions(
         filters.neraca || []
-      )
+      ).map(option => ({
+        ...option,
+        label: formatNeracaOptionLabel(option.value)
+      }))
 
 
     /*
@@ -586,8 +604,10 @@ async function loadFilterOptions() {
     */
 
     institusiOptions.value =
-      normalizeInstitusiOptions(
+      prioritizeSectorOptions(
+        normalizeInstitusiOptions(
         filters.institusi || []
+        )
       )
 
   } catch (err) {
@@ -769,7 +789,8 @@ onMounted(async () => {
    */
   emit(
     'change',
-    getCurrentFilters()
+    getCurrentFilters(),
+    { initial: true }
   )
 })
 </script>

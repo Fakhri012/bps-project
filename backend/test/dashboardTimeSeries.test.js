@@ -6,6 +6,8 @@ const {
   buildTriwulananTimeSeries,
   buildTahunanKlasifikasiTimeSeries,
   buildTriwulananKlasifikasiTimeSeries,
+  getLatestAnnualYear,
+  getPreviousAnnualYear,
   getLandingNationalIndicators
 } = require('../src/controllers/dashboardController')
 
@@ -325,24 +327,39 @@ test('quarterly classification data retains chronological periods separately', (
   )
 })
 
-test('landing overview aggregates only TOTAL EKN indicators for the latest period', () => {
+test('landing overview selects the latest annual year and ignores quarterly rows', () => {
   const rows = [
-    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 10 },
-    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 2 },
-    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Tabungan bruto', nilai: 4 },
-    { tahun: 2025, triwulan: 3, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 100 },
-    { tahun: 2025, triwulan: 4, sektor: 'FC', rincian: 'Nilai tambah bruto', nilai: 200 },
-    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Invalid', nilai: 'not-a-number' }
+    { tahun: 2024, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 100 },
+    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 10 },
+    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 2 },
+    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Tabungan bruto', nilai: 4 },
+    { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 1000 },
+    { tahun: 2026, triwulan: 1, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 2000 },
+    { tahun: 2025, sektor: 'FC', rincian: 'Nilai tambah bruto', nilai: 200 },
+    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Invalid', nilai: 'not-a-number' }
   ]
 
-  const result = getLandingNationalIndicators(rows, {
-    frequency: 'triwulanan',
-    year: 2025,
-    quarter: 4
-  })
+  const latestAnnualYear = getLatestAnnualYear(rows)
+  const previousAnnualYear = getPreviousAnnualYear(
+    rows,
+    latestAnnualYear
+  )
 
-  assert.deepEqual(result, [
-    { klasifikasi: 'Nilai tambah bruto', nilai: 12 },
-    { klasifikasi: 'Tabungan bruto', nilai: 4 }
-  ])
+  assert.equal(latestAnnualYear, 2025)
+  assert.equal(previousAnnualYear, 2024)
+
+  assert.deepEqual(
+    getLandingNationalIndicators(rows, latestAnnualYear),
+    [
+      { klasifikasi: 'Nilai tambah bruto', nilai: 12 },
+      { klasifikasi: 'Tabungan bruto', nilai: 4 }
+    ]
+  )
+
+  assert.deepEqual(
+    getLandingNationalIndicators(rows, previousAnnualYear),
+    [
+      { klasifikasi: 'Nilai tambah bruto', nilai: 100 }
+    ]
+  )
 })

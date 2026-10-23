@@ -7,8 +7,8 @@ import {
 } from '../../utils/chartColors'
 
 import {
-  formatDatabaseNumber as formatNumber
-} from '../../utils/chartFormatters.js'
+  formatDisplayNumber as formatNumber
+} from '../../utils/displayFormatters.js'
 
 
 const props = defineProps({

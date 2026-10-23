@@ -826,8 +826,6 @@ const dashboardData =
       dashboardData.map(
         (item) => item.tahun
       )
-    ).sort(
-      (a, b) => a - b
     )
 
 
@@ -865,7 +863,7 @@ const dashboardData =
       sisiData.map(
         (item) => item.sisi
       )
-    ).sort()
+      )
 
 
   /*
@@ -904,7 +902,7 @@ const dashboardData =
         (item) =>
           item.jenisNeraca
       )
-    ).sort()
+      )
 
 
   /*
@@ -948,7 +946,7 @@ const dashboardData =
         (item) =>
           item.rincian
       )
-    ).sort()
+      )
 
 
   /*
@@ -1019,12 +1017,6 @@ if (
           kode,
           nama
         })
-      )
-      .sort(
-        (a, b) =>
-          a.nama.localeCompare(
-            b.nama
-          )
       )
 
 
@@ -1119,13 +1111,7 @@ function getInstitusiOptions(data) {
 
   return [
     ...institusiMapResult.values()
-  ].sort(
-    (a, b) =>
-      a.nama.localeCompare(
-        b.nama,
-        'id'
-      )
-  )
+  ]
 }
 
 
@@ -1819,9 +1805,6 @@ const dashboardData =
       .filter(
         Number.isFinite
       )
-      .sort(
-        (a, b) => a - b
-      )
 
 
   /*
@@ -1865,9 +1848,6 @@ const dashboardData =
           Number.isInteger(item) &&
           item >= 1 &&
           item <= 4
-      )
-      .sort(
-        (a, b) => a - b
       )
       .map(
         (item) => ({
@@ -1924,7 +1904,7 @@ const dashboardData =
         (item) =>
           item.sisi
       )
-    ).sort()
+      )
 
 
   /*
@@ -1967,7 +1947,7 @@ const dashboardData =
         (item) =>
           item.jenisNeraca
       )
-    ).sort()
+      )
 
 
   /*
@@ -2008,7 +1988,7 @@ const dashboardData =
         (item) =>
           item.rincian
       )
-    ).sort()
+      )
 
 
   /*
@@ -2074,12 +2054,6 @@ if (
           kode,
           nama
         })
-      )
-      .sort(
-        (a, b) =>
-          a.nama.localeCompare(
-            b.nama
-          )
       )
 
 

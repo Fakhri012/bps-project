@@ -8,16 +8,8 @@ import {
 import {
   Activity,
   CalendarRange,
-  TrendingUp,
-  Download,
-  FileText
+  TrendingUp
 } from 'lucide-vue-next'
-
-import html2canvas
-  from 'html2canvas-pro'
-
-import jsPDF
-  from 'jspdf'
 
 import {
   getTahunanTimeSeries,
@@ -26,6 +18,9 @@ import {
 
 import TimeSeriesFilter
   from '../components/timeseries/TimeSeriesFilter.vue'
+
+import ExportActions
+  from '../components/ExportActions.vue'
 
 import TimeSeriesActiveFilters
   from '../components/timeseries/TimeSeriesActiveFilters.vue'
@@ -42,12 +37,19 @@ import QuarterlyTimeSeriesChart
 import TimeSeriesNeracaComparisonChart
   from '../components/timeseries/TimeSeriesNeracaComparisonChart.vue'
 
+import {
+  publishChangedFilters
+} from '../composables/filterState.js'
 
-/*
-|--------------------------------------------------------------------------
-| STATE
-|--------------------------------------------------------------------------
-*/
+import {
+  formatDisplayNumber
+} from '../utils/displayFormatters.js'
+
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  exportChartsPdf
+} from '../utils/reportExport.js'
 
 const loading =
   ref(false)
@@ -72,19 +74,6 @@ const tahunanKlasifikasiData =
 
 const triwulananKlasifikasiData =
   ref([])
-
-
-/*
-|--------------------------------------------------------------------------
-| MODE GRAFIK
-|--------------------------------------------------------------------------
-|
-| annual (default)
-| both
-| annual
-| quarterly
-|
-*/
 
 const chartMode =
   ref('both')
@@ -197,6 +186,8 @@ const activeFilters =
     klasifikasi: [],
     institusi: []
   })
+
+let previousSharedFilters = null
 
 
 /*
@@ -647,7 +638,8 @@ async function loadTimeSeries(
 */
 
 function handleFilterChange(
-  filters = {}
+  filters = {},
+  metadata = {}
 ) {
   console.log(
   '[TimeSeries] handleFilterChange:',
@@ -709,6 +701,38 @@ function handleFilterChange(
         : []
   }
 
+  if (!metadata.initial) {
+    previousSharedFilters = publishChangedFilters(
+      previousSharedFilters,
+      {
+        tahun: activeFilters.value.tahun,
+        triwulan: activeFilters.value.triwulan,
+        jenis: activeFilters.value.sisi,
+        neraca: activeFilters.value.neraca,
+        klasifikasi: activeFilters.value.klasifikasi
+      },
+      [
+        'tahun',
+        'triwulan',
+        'jenis',
+        'neraca',
+        'klasifikasi'
+      ]
+    )
+  } else {
+    previousSharedFilters = publishChangedFilters(
+      null,
+      {
+        tahun: activeFilters.value.tahun,
+        triwulan: activeFilters.value.triwulan,
+        jenis: activeFilters.value.sisi,
+        neraca: activeFilters.value.neraca,
+        klasifikasi: activeFilters.value.klasifikasi
+      },
+      []
+    )
+  }
+
   const canLoadData =
     activeFilters.value.neraca.length > 0 &&
     activeFilters.value.klasifikasi.length > 0
@@ -730,44 +754,6 @@ function handleFilterChange(
   loadTimeSeries(
     activeFilters.value
   )
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMAT TANGGAL FILE
-|--------------------------------------------------------------------------
-*/
-
-function getExportDate() {
-  const now =
-    new Date()
-
-
-  const year =
-    now.getFullYear()
-
-
-  const month =
-    String(
-      now.getMonth() +
-      1
-    ).padStart(
-      2,
-      '0'
-    )
-
-
-  const day =
-    String(
-      now.getDate()
-    ).padStart(
-      2,
-      '0'
-    )
-
-
-  return `${year}-${month}-${day}`
 }
 
 
@@ -797,50 +783,37 @@ function getExportModeName() {
   return 'tahunan-triwulanan'
 }
 
+function getExportFilters() {
+  return {
+    Tahun: activeFilters.value.tahun,
+    Triwulan: activeFilters.value.triwulan,
+    Jenis: activeFilters.value.sisi,
+    Neraca: activeFilters.value.neraca,
+    Klasifikasi: activeFilters.value.klasifikasi,
+    Sektor: activeFilters.value.institusi
+  }
+}
 
-/*
-|--------------------------------------------------------------------------
-| CSV HELPER
-|--------------------------------------------------------------------------
-*/
-
-function escapeCsvValue(
-  value
-) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return ''
+function getExportPeriod() {
+  if (chartMode.value === 'annual') {
+    return annualRange.value
   }
 
-
-  const text =
-    String(
-      value
-    )
-
-
-  /*
-   * CSV menggunakan ;
-   * agar lebih nyaman dibuka Excel
-   * dengan regional Indonesia.
-   */
-
-  if (
-    text.includes(';') ||
-    text.includes('"') ||
-    text.includes('\n') ||
-    text.includes('\r')
-  ) {
-    return `"${text.replace(
-      /"/g,
-      '""'
-    )}"`
+  if (chartMode.value === 'quarterly') {
+    return quarterlyRange.value
   }
 
+  return `Tahunan ${annualRange.value}; Triwulanan ${quarterlyRange.value}`
+}
 
-  return text
+function getExportFilename(extension) {
+  return buildExportFilename({
+    page: 'time-series',
+    mode: getExportModeName(),
+    period: getExportPeriod(),
+    filters: getExportFilters(),
+    extension
+  })
 }
 
 
@@ -977,94 +950,10 @@ function downloadTimeSeriesCsv() {
     |--------------------------------------------------------------------------
     */
 
-    const csv =
-      rows
-        .map(
-          row =>
-            row
-              .map(
-                escapeCsvValue
-              )
-              .join(';')
-        )
-        .join(
-          '\r\n'
-        )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CREATE FILE
-    |--------------------------------------------------------------------------
-    */
-
-    const blob =
-      new Blob(
-        [
-          '\uFEFF',
-          csv
-        ],
-        {
-          type:
-            'text/csv;charset=utf-8;'
-        }
-      )
-
-
-    const url =
-      URL.createObjectURL(
-        blob
-      )
-
-
-    const link =
-      document.createElement(
-        'a'
-      )
-
-
-    link.href =
-      url
-
-
-    link.download =
-      `time-series-${getExportModeName()}-${getExportDate()}.csv`
-
-
-    link.style.display =
-      'none'
-
-
-    document.body.appendChild(
-      link
-    )
-
-
-    link.click()
-
-
-    /*
-     * Jangan langsung revoke,
-     * beri browser waktu untuk
-     * memulai download.
-     */
-
-    setTimeout(
-      () => {
-        if (
-          link.parentNode
-        ) {
-          link.parentNode.removeChild(
-            link
-          )
-        }
-
-
-        URL.revokeObjectURL(
-          url
-        )
-      },
-      500
+    downloadCsvFile(
+      getExportFilename('csv'),
+      rows[0],
+      rows.slice(1)
     )
 
 
@@ -1121,338 +1010,25 @@ async function downloadTimeSeriesPdf() {
     return
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | CEK DATA
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    tahunanData.value.length ===
-      0 &&
-    triwulananData.value.length ===
-      0
-  ) {
-    alert(
-      'Tidak ada data yang dapat diexport.'
-    )
-
-    return
-  }
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | CARI AREA REPORT
-  |--------------------------------------------------------------------------
-  */
-
-  const element =
-    document.getElementById(
-      'time-series-report'
-    )
-
-
-  if (
-    !element
-  ) {
-    console.error(
-      'Element #time-series-report tidak ditemukan.'
-    )
-
-
-    alert(
-      'Area Time Series untuk PDF tidak ditemukan.'
-    )
-
-    return
-  }
-
-
   try {
     exportingPdf.value =
       true
 
+    await nextTick()
+    await waitForRender()
 
-    /*
-    |--------------------------------------------------------------------------
-    | PASTIKAN CHART SUDAH SESUAI UKURAN TERBARU
-    |--------------------------------------------------------------------------
-    */
-
-/*
-|--------------------------------------------------------------------------
-| TUNGGU CHART BENAR-BENAR SELESAI
-|--------------------------------------------------------------------------
-|
-| Jangan remount ECharts saat export.
-| Kalau chart di-remount, animasi dimulai lagi
-| dan html2canvas bisa menangkap garis setengah jadi.
-|
-*/
-
-await nextTick()
-
-await new Promise(
-  resolve => {
-    setTimeout(
-      resolve,
-      900
-    )
-  }
-)
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CAPTURE HTML
-    |--------------------------------------------------------------------------
-    */
-
-    const canvas =
-      await html2canvas(
-        element,
-        {
-          /*
-           * 2 cukup tajam tetapi
-           * tidak terlalu berat.
-           */
-          scale: 2,
-
-          useCORS: true,
-
-          allowTaint: false,
-
-          backgroundColor:
-            '#ffffff',
-
-          logging: false,
-
-          /*
-           * Pastikan capture mulai
-           * dari posisi halaman yang benar.
-           */
-          scrollX:
-            -window.scrollX,
-
-          scrollY:
-            -window.scrollY,
-
-          /*
-           * Capture ukuran element penuh.
-           */
-          width:
-            element.scrollWidth,
-
-          height:
-            element.scrollHeight,
-
-          windowWidth:
-            Math.max(
-              document.documentElement
-                .clientWidth,
-
-              element.scrollWidth
-            ),
-
-          windowHeight:
-            Math.max(
-              document.documentElement
-                .clientHeight,
-
-              element.scrollHeight
-            )
-        }
-      )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | VALIDASI CANVAS
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-      !canvas ||
-      canvas.width === 0 ||
-      canvas.height === 0
-    ) {
-      throw new Error(
-        'Canvas hasil export kosong.'
-      )
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | IMAGE DATA
-    |--------------------------------------------------------------------------
-    */
-
-    const imageData =
-      canvas.toDataURL(
-        'image/jpeg',
-        0.95
-      )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CREATE PDF
-    |--------------------------------------------------------------------------
-    */
-
-    const pdf =
-      new jsPDF(
-        {
-          orientation:
-            'landscape',
-
-          unit:
-            'mm',
-
-          format:
-            'a4',
-
-          compress:
-            true
-        }
-      )
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAGE SIZE
-    |--------------------------------------------------------------------------
-    */
-
-    const pageWidth =
-      pdf.internal
-        .pageSize
-        .getWidth()
-
-
-    const pageHeight =
-      pdf.internal
-        .pageSize
-        .getHeight()
-
-
-    const margin =
-      8
-
-
-    const contentWidth =
-      pageWidth -
-      margin * 2
-
-
-    const contentHeight =
-      pageHeight -
-      margin * 2
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | IMAGE SIZE
-    |--------------------------------------------------------------------------
-    */
-
-    const imageWidth =
-      contentWidth
-
-
-    const imageHeight =
-      (
-        canvas.height *
-        imageWidth
-      ) /
-      canvas.width
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADD MULTI PAGE
-    |--------------------------------------------------------------------------
-    */
-
-    let heightLeft =
-      imageHeight
-
-
-    let position =
-      margin
-
-
-    /*
-     * Halaman pertama.
-     */
-
-    pdf.addImage(
-      imageData,
-      'JPEG',
-      margin,
-      position,
-      imageWidth,
-      imageHeight,
-      undefined,
-      'FAST'
+    const chartElements = document.querySelectorAll(
+      '#time-series-report [data-pdf-chart]'
     )
 
-
-    heightLeft -=
-      contentHeight
-
-
-    /*
-     * Halaman berikutnya.
-     */
-
-    while (
-      heightLeft > 0
-    ) {
-      pdf.addPage(
-        'a4',
-        'landscape'
-      )
-
-
-      position =
-        margin -
-        (
-          imageHeight -
-          heightLeft
-        )
-
-
-      pdf.addImage(
-        imageData,
-        'JPEG',
-        margin,
-        position,
-        imageWidth,
-        imageHeight,
-        undefined,
-        'FAST'
-      )
-
-
-      heightLeft -=
-        contentHeight
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SAVE
-    |--------------------------------------------------------------------------
-    */
-
-    pdf.save(
-      `time-series-${getExportModeName()}-${getExportDate()}.pdf`
-    )
-
+    await exportChartsPdf({
+      filename: getExportFilename('pdf'),
+      reportTitle: 'BPS - Time Series Neraca Sektoral',
+      mode: getExportModeName(),
+      period: getExportPeriod(),
+      filters: getExportFilters(),
+      chartElements
+    })
 
   } catch (err) {
     console.error(
@@ -1854,103 +1430,13 @@ await new Promise(
           gap-2
         "
       >
-        <!-- =========================
-             EXPORT CSV
-        ========================== -->
-
-        <button
-          type="button"
-          class="
-            inline-flex
-            items-center
-            gap-1.5
-            rounded-lg
-            border
-            border-slate-200
-            bg-white
-            px-3
-            py-2
-            text-[10px]
-            font-semibold
-            text-slate-600
-            shadow-sm
-            transition
-            hover:border-blue-200
-            hover:bg-blue-50
-            hover:text-blue-600
-            disabled:cursor-not-allowed
-            disabled:opacity-40
-          "
-          :disabled="
-            loading ||
-            (
-              tahunanData.length === 0 &&
-              triwulananData.length === 0
-            )
-          "
-          @click="
-            downloadTimeSeriesCsv
-          "
-        >
-          <Download
-            :size="13"
-            :stroke-width="1.8"
-          />
-
-          Export CSV
-        </button>
-
-
-        <!-- =========================
-             EXPORT PDF
-        ========================== -->
-
-        <button
-          type="button"
-          class="
-            inline-flex
-            items-center
-            gap-1.5
-            rounded-lg
-            border
-            border-slate-200
-            bg-white
-            px-3
-            py-2
-            text-[10px]
-            font-semibold
-            text-slate-600
-            shadow-sm
-            transition
-            hover:border-red-200
-            hover:bg-red-50
-            hover:text-red-600
-            disabled:cursor-not-allowed
-            disabled:opacity-40
-          "
-          :disabled="
-            loading ||
-            exportingPdf ||
-            (
-              tahunanData.length === 0 &&
-              triwulananData.length === 0
-            )
-          "
-          @click="
-            downloadTimeSeriesPdf
-          "
-        >
-          <FileText
-            :size="13"
-            :stroke-width="1.8"
-          />
-
-          {{
-            exportingPdf
-              ? 'Membuat PDF...'
-              : 'Export PDF'
-          }}
-        </button>
+        <ExportActions
+          :csv-disabled="loading || (!tahunanData.length && !triwulananData.length)"
+          :pdf-disabled="loading || (!tahunanData.length && !triwulananData.length)"
+          :pdf-busy="exportingPdf"
+          @csv="downloadTimeSeriesCsv"
+          @pdf="downloadTimeSeriesPdf"
+        />
 
 
         <!-- =========================
@@ -2294,7 +1780,7 @@ await new Promise(
                 text-sky-700
               "
             >
-              {{ annualPeriodCount }}
+              {{ formatDisplayNumber(annualPeriodCount) }}
               periode
             </span>
           </div>
@@ -2314,6 +1800,8 @@ await new Promise(
           "
         >
           <AnnualTimeSeriesChart
+            :data-pdf-chart="tahunanData.length > 0 ? 'annual' : null"
+            data-pdf-title="Perkembangan Nilai Tahunan"
             :key="
               `annual-${chartRenderKey}`
             "
@@ -2434,7 +1922,7 @@ await new Promise(
                 text-teal-700
               "
             >
-              {{ quarterlyPeriodCount }}
+              {{ formatDisplayNumber(quarterlyPeriodCount) }}
               periode
             </span>
           </div>
@@ -2454,6 +1942,8 @@ await new Promise(
           "
         >
           <QuarterlyTimeSeriesChart
+            :data-pdf-chart="triwulananData.length > 0 ? 'quarterly' : null"
+            data-pdf-title="Perkembangan Nilai Triwulanan"
             :key="
               `quarterly-${chartRenderKey}`
             "

@@ -1,6 +1,7 @@
 <script setup>
 import {
   ref,
+  toRef,
   computed,
   watch,
   onMounted
@@ -10,7 +11,8 @@ import {
   RotateCcw,
   LoaderCircle,
   SlidersHorizontal,
-  X
+  X,
+  ChevronDown
 } from 'lucide-vue-next'
 
 import MultiSelectFilter
@@ -20,6 +22,19 @@ import {
   getTahunanAssetFilters,
   getTriwulananAssetFilters
 } from '../../services/dashboardApi'
+
+import {
+  usePersistentFilterState
+} from '../../composables/filterState.js'
+
+import {
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
+
+import {
+  formatNeracaOptionLabel,
+  prioritizeSectorOptions
+} from '../../utils/dashboardText.js'
 
 
 /*
@@ -39,26 +54,31 @@ const emit = defineEmits([
 |--------------------------------------------------------------------------
 */
 
-const periode =
-  ref('tahunan')
+const { state: savedFilters } =
+  usePersistentFilterState('asset', {
+    periode: 'tahunan',
+    tahun: [],
+    triwulan: [],
+    jenis: [],
+    neraca: [],
+    klasifikasi: [],
+    institusi: []
+  }, {
+    periode: 'periode',
+    jenis: 'jenis',
+    tahun: 'tahun',
+    triwulan: 'triwulan',
+    neraca: 'neraca',
+    klasifikasi: 'klasifikasi'
+  })
 
-const tahun =
-  ref([])
-
-const triwulan =
-  ref([])
-
-const jenis =
-  ref([])
-
-const neraca =
-  ref([])
-
-const klasifikasi =
-  ref([])
-
-const institusi =
-  ref([])
+const periode = toRef(savedFilters, 'periode')
+const tahun = toRef(savedFilters, 'tahun')
+const triwulan = toRef(savedFilters, 'triwulan')
+const jenis = toRef(savedFilters, 'jenis')
+const neraca = toRef(savedFilters, 'neraca')
+const klasifikasi = toRef(savedFilters, 'klasifikasi')
+const institusi = toRef(savedFilters, 'institusi')
 
 
 /*
@@ -388,6 +408,41 @@ const activeCount =
     activeChips.value.length
   )
 
+const activeChipGroups =
+  computed(() => {
+    const groups = new Map()
+
+    for (const chip of activeChips.value) {
+      if (!groups.has(chip.group)) {
+        groups.set(chip.group, {
+          key: chip.group,
+          label: chip.groupLabel,
+          chips: []
+        })
+      }
+
+      groups.get(chip.group).chips.push(chip)
+    }
+
+    return [...groups.values()]
+  })
+
+const expandedFilterGroup = ref('')
+
+const expandedChipGroup =
+  computed(() =>
+    activeChipGroups.value.find(
+      group => group.key === expandedFilterGroup.value
+    )
+  )
+
+function toggleFilterGroup(key) {
+  expandedFilterGroup.value =
+    expandedFilterGroup.value === key
+      ? ''
+      : key
+}
+
 function removeChip(chip) {
   const group =
     filterGroups.value.find(
@@ -554,7 +609,10 @@ response =
     neracaOptions.value =
       normalizeTextOptions(
         filters.neraca || []
-      )
+      ).map(option => ({
+        ...option,
+        label: formatNeracaOptionLabel(option.value)
+      }))
 
 
     /*
@@ -579,8 +637,10 @@ response =
     */
 
     institusiOptions.value =
-      normalizeInstitusiOptions(
+      prioritizeSectorOptions(
+        normalizeInstitusiOptions(
         filters.institusi || []
+        )
       )
 
   } catch (err) {
@@ -701,7 +761,8 @@ onMounted(async () => {
 
   emit(
     'change',
-    getCurrentFilters()
+    getCurrentFilters(),
+    { initial: true }
   )
 })
 </script>
@@ -793,7 +854,7 @@ onMounted(async () => {
                 text-white
               "
             >
-              {{ activeCount }}
+              {{ formatDisplayNumber(activeCount) }}
             </span>
           </div>
 
@@ -989,38 +1050,104 @@ onMounted(async () => {
         border-slate-100
         bg-slate-50/40
         px-4
-        py-2
+        py-2.5
       "
     >
       <div
         class="
           flex
+          flex-wrap
           items-center
-          gap-1.5
-          overflow-x-auto
-          pb-0.5
-          scrollbar-thin
+          gap-2
         "
       >
-        <TransitionGroup
-          name="chip"
+        <span
+          class="
+            mr-1
+            text-[10px]
+            font-semibold
+            text-slate-500
+          "
         >
+          Filter aktif
+        </span>
+
+        <button
+          v-for="group in activeChipGroups"
+          :key="group.key"
+          type="button"
+          :aria-expanded="expandedFilterGroup === group.key"
+          aria-controls="active-filter-values"
+          class="
+            inline-flex
+            min-h-7
+            items-center
+            gap-1.5
+            rounded-md
+            border
+            px-2
+            text-[10px]
+            font-medium
+            transition
+          "
+          :class="
+            expandedFilterGroup === group.key
+              ? 'border-teal-200 bg-teal-50 text-teal-800'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-teal-200 hover:text-teal-800'
+          "
+          @click="toggleFilterGroup(group.key)"
+        >
+          <span>{{ group.label }}</span>
+          <span
+            class="
+              rounded-full
+              bg-slate-100
+              px-1.5
+              py-0.5
+              text-[9px]
+              font-bold
+              text-slate-600
+            "
+          >
+            {{ formatDisplayNumber(group.chips.length) }}
+          </span>
+          <ChevronDown
+            :size="12"
+            class="transition-transform"
+            :class="expandedFilterGroup === group.key ? 'rotate-180' : ''"
+          />
+        </button>
+      </div>
+
+      <div
+        v-if="expandedChipGroup"
+        id="active-filter-values"
+        class="
+          mt-2
+          flex
+          flex-wrap
+          gap-1.5
+          rounded-lg
+          border
+          border-slate-200
+          bg-white
+          p-2
+        "
+      >
+        <TransitionGroup name="chip">
           <button
-            v-for="
-              chip in activeChips
-            "
-            :key="
-              `${chip.group}-${chip.value}`
-            "
+            v-for="chip in expandedChipGroup.chips"
+            :key="`${chip.group}-${chip.value}`"
             type="button"
             class="
               group
               inline-flex
-              shrink-0
+              max-w-full
               items-center
               gap-1
               rounded-md
-              border border-teal-100
+              border
+              border-teal-100
               bg-teal-50
               px-2
               py-1
@@ -1030,38 +1157,15 @@ onMounted(async () => {
               transition
               hover:bg-teal-100
             "
-            @click="
-              removeChip(chip)
-            "
+            :aria-label="`Hapus ${chip.label} dari filter ${chip.groupLabel}`"
+            @click="removeChip(chip)"
           >
-            <span
-              class="
-                text-teal-500
-              "
-            >
-              {{ chip.groupLabel }}
-            </span>
-
-            <span
-              class="
-                max-w-[190px]
-                truncate
-                font-semibold
-              "
-              :title="
-                chip.label
-              "
-            >
+            <span class="max-w-[min(70vw,280px)] truncate" :title="chip.label">
               {{ chip.label }}
             </span>
-
             <X
               :size="10"
-              class="
-                ml-0.5
-                text-teal-500
-                group-hover:text-teal-800
-              "
+              class="shrink-0 text-teal-500 group-hover:text-teal-800"
             />
           </button>
         </TransitionGroup>

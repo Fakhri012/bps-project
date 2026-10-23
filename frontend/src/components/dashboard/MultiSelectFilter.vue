@@ -13,6 +13,10 @@ import {
   X
 } from 'lucide-vue-next'
 
+import {
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -873,7 +877,7 @@ onBeforeUnmount(() => {
                  font-medium
                  text-slate-500"
         >
-          {{ modelValue.length }}
+          {{ formatDisplayNumber(modelValue.length) }}
           dipilih
         </span>
 

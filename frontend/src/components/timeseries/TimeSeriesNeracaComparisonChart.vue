@@ -468,6 +468,10 @@ onBeforeUnmount(() => {
             v-else
             :ref="element => setChartRef(panel.key, element)"
             class="h-full w-full"
+            :data-pdf-chart="panel.hasData ? 'sector-comparison' : null"
+            :data-pdf-title="panel.hasData
+              ? `Perbandingan Klasifikasi - ${panel.sektor} (${panel.frequency === 'quarterly' ? 'Triwulanan' : 'Tahunan'})`
+              : null"
           ></div>
         </div>
       </section>

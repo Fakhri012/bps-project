@@ -9,7 +9,10 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
-  LayoutDashboard
+  LayoutDashboard,
+  TrendingDown,
+  TrendingUp,
+  Minus
 } from 'lucide-vue-next'
 
 import logoBps from '../assets/logo.png'
@@ -18,7 +21,11 @@ import {
   getLandingOverview
 } from '../services/dashboardApi'
 
-const OVERVIEW_CACHE_KEY = 'bps-dashboard-landing-overview'
+import {
+  formatDisplayNumber
+} from '../utils/displayFormatters.js'
+
+const OVERVIEW_CACHE_KEY = 'bps-dashboard-landing-overview.annual-comparison.v2'
 
 function readCachedOverview() {
   try {
@@ -28,7 +35,8 @@ function readCachedOverview() {
 
     return cached &&
       typeof cached === 'object' &&
-      cached.latestPeriod &&
+      cached.latestPeriod?.frequency === 'tahunan' &&
+      Number.isInteger(Number(cached.latestPeriod.year)) &&
       Array.isArray(cached.nationalIndicators?.values)
       ? cached
       : null
@@ -69,6 +77,11 @@ const macroDefinitions = [
     key: 'gross-saving',
     label: 'Tabungan bruto',
     classification: 'Tabungan bruto',
+  },
+  {
+    key: 'loans',
+    label: 'Pinjaman',
+    classification: 'Pinjaman',
   }
 ]
 
@@ -104,10 +117,7 @@ function formatIndicatorValue(value) {
     return '—'
   }
 
-  return new Intl.NumberFormat('id-ID', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(number)
+  return formatDisplayNumber(number)
 }
 
 const latestPeriodLabel = computed(() =>
@@ -117,13 +127,14 @@ const latestPeriodLabel = computed(() =>
 const latestPeriodCaption = computed(() => {
   const period = overviewResponse.value?.latestPeriod
 
-  if (!period) {
+  if (
+    period?.frequency !== 'tahunan' ||
+    !Number.isInteger(Number(period.year))
+  ) {
     return ''
   }
 
-  return period.frequency === 'triwulanan'
-    ? `Triwulan ${period.quarter} tahun ${period.year}`
-    : `Tahun ${period.year}`
+  return `Tahun Terakhir: ${period.year}`
 })
 
 const unitLabel = computed(() =>
@@ -160,6 +171,75 @@ const macroCards = computed(() =>
 const financialCards = computed(() =>
   mapLatestIndicators(financialDefinitions)
 )
+
+const comparisonDefinitions = [
+  ...macroDefinitions
+]
+
+const previousClassificationRows = computed(() =>
+  Array.isArray(overviewResponse.value?.previousNationalIndicators?.values)
+    ? overviewResponse.value.previousNationalIndicators.values
+    : []
+)
+
+function findIndicatorValue(rows, definition) {
+  const row = rows.find(item =>
+    String(item.klasifikasi ?? '').trim().toLocaleLowerCase('id-ID') ===
+    definition.classification.toLocaleLowerCase('id-ID')
+  )
+
+  return row && isValidNumber(row.nilai)
+    ? Number(row.nilai)
+    : null
+}
+
+const comparisonCards = computed(() => {
+  const latestYear = overviewResponse.value?.latestPeriod?.year ?? null
+  const previousYear = overviewResponse.value?.previousPeriod?.year ?? null
+
+  return comparisonDefinitions.map(definition => {
+    const latestValue = findIndicatorValue(
+      latestClassificationRows.value,
+      definition
+    )
+    const previousValue = findIndicatorValue(
+      previousClassificationRows.value,
+      definition
+    )
+    const comparable =
+      latestValue !== null &&
+      previousValue !== null
+    const difference = comparable
+      ? latestValue - previousValue
+      : null
+    const percentChange = comparable && previousValue !== 0
+      ? (difference / previousValue) * 100
+      : null
+
+    return {
+      ...definition,
+      latestYear,
+      previousYear,
+      latestValue,
+      previousValue,
+      comparable,
+      difference,
+      percentChange,
+      changeIcon: difference === null
+        ? Minus
+        : difference > 0
+          ? TrendingUp
+          : difference < 0
+            ? TrendingDown
+            : Minus,
+      changeClass: difference === null || difference === 0
+        ? 'text-blue-100'
+        : difference > 0
+          ? 'text-emerald-300'
+          : 'text-rose-300'
+    }
+  })
+})
 
 const hasOverviewData = computed(() =>
   Boolean(latestPeriodLabel.value) ||
@@ -257,7 +337,7 @@ onMounted(loadOverview)
         <div class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#07133f]/45 px-3.5 py-2 text-[10px] text-blue-100 sm:text-xs">
           <CalendarDays :size="14" class="text-[#f3cf7a]" />
           <span v-if="loading">Memuat periode data…</span>
-          <span v-else-if="latestPeriodCaption">Periode terbaru: <strong class="font-bold text-white">{{ latestPeriodCaption }}</strong></span>
+          <span v-else-if="latestPeriodCaption"><strong class="font-bold text-white">{{ latestPeriodCaption }}</strong></span>
           <span v-else>Periode terbaru belum tersedia</span>
         </div>
 
@@ -273,8 +353,8 @@ onMounted(loadOverview)
             </div>
           </div>
 
-          <div v-if="loading" class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            <div v-for="item in 4" :key="`macro-loading-${item}`" class="h-[104px] animate-pulse rounded-xl border border-white/20 bg-white/10 sm:h-[118px]"></div>
+          <div v-if="loading" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
+            <div v-for="item in 5" :key="`macro-loading-${item}`" class="h-[104px] animate-pulse rounded-xl border border-white/20 bg-white/10 sm:h-[118px]"></div>
           </div>
           <div v-else-if="error" class="rounded-xl border border-rose-300/50 bg-rose-950/35 px-5 py-4 text-left text-sm text-rose-100" role="alert">
             <p class="font-bold">Ringkasan statistik belum tersedia</p>
@@ -284,7 +364,7 @@ onMounted(loadOverview)
           <div v-else-if="!hasOverviewData" class="rounded-xl border border-white/15 bg-white/5 px-5 py-8 text-sm text-blue-100">
             Indikator nasional belum tersedia untuk periode terbaru.
           </div>
-          <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
             <article v-for="(card, index) in macroCards" :key="card.key" class="group flex min-h-[104px] flex-col justify-between rounded-xl border border-white/50 bg-[#eaf4ff] p-3 text-left text-[#101a35] shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-1 hover:bg-white sm:min-h-[118px] sm:p-4">
               <div class="flex items-start justify-between gap-2">
                 <span class="text-[9px] font-bold uppercase tracking-[0.1em] text-[#526985]">Indikator 0{{ index + 1 }}</span>
@@ -296,23 +376,74 @@ onMounted(loadOverview)
               </div>
             </article>
           </div>
+
+          <div class="mt-5 text-center">
+            <div class="mb-1 flex flex-col items-center justify-center gap-1">
+              <p class="text-[9px] font-bold uppercase tracking-[0.14em] text-[#68d4c2]">Ringkasan tahunan</p>
+              <h2 class="text-sm font-bold text-white sm:text-base">Perubahan indikator</h2>
+            </div>
+            <div class="mb-4 flex justify-center">
+              <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#07133f]/45 px-3 py-1 text-[9px] font-semibold text-blue-100 sm:text-[10px]">
+                <span>{{ overviewResponse?.latestPeriod?.year ?? '—' }}</span>
+                <span class="text-[#68d4c2]">vs</span>
+                <span>{{ overviewResponse?.previousPeriod?.year ?? '—' }}</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-5">
+              <article
+                v-for="card in comparisonCards"
+                :key="`comparison-${card.key}`"
+                :aria-describedby="`comparison-tooltip-${card.key}`"
+                tabindex="0"
+                class="group relative flex min-h-[124px] cursor-help flex-col rounded-xl border border-white/15 border-t-2 border-t-[#68d4c2] bg-[#153b76]/85 p-3 text-left text-white shadow-[0_8px_18px_rgba(0,0,0,0.15)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#1b4b8d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9fd2ff] sm:p-3.5"
+              >
+                <div
+                  :id="`comparison-tooltip-${card.key}`"
+                  role="tooltip"
+                  class="pointer-events-none invisible absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-max max-w-[min(85vw,260px)] -translate-x-1/2 rounded-lg border border-white/15 bg-[#07133f] px-3 py-2 text-left text-[10px] text-white opacity-0 shadow-xl transition duration-150 group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                >
+                  <p class="mb-1.5 font-bold text-blue-100">{{ card.label }}</p>
+                  <div class="flex items-center justify-between gap-5">
+                    <span class="text-blue-200">{{ card.previousYear ?? 'Tahun sebelumnya' }}</span>
+                    <strong class="tabular-nums">
+                      {{ card.previousValue === null ? 'Belum tersedia' : formatIndicatorValue(card.previousValue) }}
+                    </strong>
+                  </div>
+                  <div class="mt-1 flex items-center justify-between gap-5">
+                    <span class="text-blue-200">{{ card.latestYear ?? 'Tahun terbaru' }}</span>
+                    <strong class="tabular-nums">
+                      {{ card.latestValue === null ? 'Belum tersedia' : formatIndicatorValue(card.latestValue) }}
+                    </strong>
+                  </div>
+                </div>
+
+                <div class="flex items-start justify-between gap-2">
+                  <h3 class="min-w-0 text-[10px] font-bold leading-tight text-blue-100 sm:text-xs">
+                    {{ card.label }}
+                  </h3>
+                  <component :is="card.changeIcon" :size="14" class="shrink-0" :class="card.changeClass" />
+                </div>
+
+                <div class="mt-3 flex items-end justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[8px] font-semibold uppercase text-blue-200">Perubahan</p>
+                    <strong class="mt-0.5 block truncate text-lg font-extrabold leading-none tabular-nums sm:text-xl" :class="card.changeClass">
+                      {{ card.percentChange === null ? '—' : `${card.percentChange > 0 ? '+' : ''}${formatIndicatorValue(card.percentChange)}%` }}
+                    </strong>
+                  </div>
+                  <div class="shrink-0 text-right">
+                    <p class="text-[8px] font-semibold uppercase text-blue-200">Selisih</p>
+                    <strong class="mt-0.5 block text-[10px] font-bold tabular-nums text-white sm:text-[11px]">
+                      {{ card.difference === null ? '—' : `${card.difference > 0 ? '+' : ''}${formatIndicatorValue(card.difference)}` }}
+                    </strong>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
         </div>
 
-        <div v-if="loading" class="mt-5 grid w-full max-w-[650px] grid-cols-3 gap-3 sm:gap-4">
-          <div v-for="item in 3" :key="`financial-loading-${item}`" class="h-[86px] animate-pulse rounded-xl border border-white/10 bg-[#1c4381]/70"></div>
-        </div>
-        <div v-else-if="!error && hasOverviewData" class="mt-5 w-full max-w-[650px]">
-          <div class="mb-2 flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.13em] text-blue-200 sm:text-[10px]">
-            <span class="h-px w-8 bg-white/20"></span>Instrumen keuangan<span class="h-px w-8 bg-white/20"></span>
-          </div>
-          <div class="grid grid-cols-3 gap-3 sm:gap-4">
-            <article v-for="card in financialCards" :key="card.key" class="flex min-h-[86px] flex-col justify-center rounded-xl border border-white/15 bg-[#153b76]/85 px-2 py-3 text-white shadow-[0_8px_18px_rgba(0,0,0,0.15)] transition duration-200 hover:-translate-y-1 hover:border-[#9fd2ff]/50 hover:bg-[#1b4b8d] sm:min-h-[96px] sm:px-3">
-              <component :is="card.icon" :size="15" class="mx-auto mb-2 text-[#f3cf7a]" />
-              <p class="whitespace-nowrap text-[18px] font-extrabold leading-none tabular-nums sm:text-[24px]">{{ card.available ? formatIndicatorValue(card.value) : 'Belum tersedia' }}</p>
-              <p class="mt-2 text-[9px] font-semibold leading-tight text-blue-100 sm:text-[11px]">{{ card.label }}</p>
-            </article>
-          </div>
-        </div>
       </section>
 
       <section class="border-y border-white/15 bg-[#07133f]/35 px-5 py-5 sm:px-10 sm:py-6" aria-labelledby="guide-title">

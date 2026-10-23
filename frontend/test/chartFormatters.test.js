@@ -39,14 +39,19 @@ test('formats time-series values without rounding decimal digits', () => {
   }
 })
 
-test('formats time-series axis in trillions and preserves invalid fallback', () => {
+test('formats time-series axis in the raw data scale', () => {
   const cases = [
-    [1234.5, '0,00 T'],
-    [1000000, '1,00 T'],
-    [-2500000, '-2,50 T'],
-    [0, '0,00 T'],
-    ['bad', '0,00 T'],
-    [null, '0,00 T']
+    [1234.5, '1.234,5'],
+    [142.0005, '142,0005'],
+    [0.000001, '0,000001'],
+    [1e-12, '0,000000000001'],
+    [1000000, '1.000.000'],
+    [1000000000000, '1.000.000.000.000'],
+    [-2500000, '-2.500.000'],
+    [-0.25, '-0,25'],
+    [0, '0'],
+    ['bad', '0'],
+    [null, '0']
   ]
 
   for (const [value, expected] of cases) {

@@ -1,5 +1,13 @@
 <script setup>
-defineProps({
+import {
+  computed
+} from 'vue'
+
+import {
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
+
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -20,6 +28,12 @@ defineProps({
     default: null
   }
 })
+
+const displayValue = computed(() =>
+  typeof props.value === 'number'
+    ? formatDisplayNumber(props.value)
+    : props.value
+)
 </script>
 
 <template>
@@ -48,7 +62,7 @@ defineProps({
                  font-bold tracking-tight
                  text-slate-900"
         >
-          {{ value }}
+          {{ displayValue }}
         </h3>
 
         <p

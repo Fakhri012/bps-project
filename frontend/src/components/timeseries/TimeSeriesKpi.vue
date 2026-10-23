@@ -12,8 +12,8 @@ import {
 } from 'lucide-vue-next'
 
 import {
-  formatDatabaseNumber
-} from '../../utils/chartFormatters.js'
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
 
 
 /*
@@ -54,7 +54,7 @@ function formatValue(
     return '—'
   }
 
-  return formatDatabaseNumber(number)
+  return formatDisplayNumber(number)
 }
 
 
@@ -81,12 +81,7 @@ function formatPercent(
       ? '+'
       : ''
 
-  return `${sign}${new Intl.NumberFormat(
-    'id-ID',
-    {
-      maximumFractionDigits: 2
-    }
-  ).format(number)}%`
+  return `${sign}${formatDisplayNumber(number)}%`
 }
 
 

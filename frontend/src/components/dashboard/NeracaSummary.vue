@@ -10,8 +10,8 @@ import {
 } from 'lucide-vue-next'
 
 import {
-  formatDatabaseNumber
-} from '../../utils/chartFormatters.js'
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
 
 
 /*
@@ -150,7 +150,7 @@ function formatCurrencyScale(value) {
   }
 
   const formattedValue =
-    formatDatabaseNumber(number)
+    formatDisplayNumber(number)
 
   return {
     value: formattedValue,
@@ -468,7 +468,7 @@ const metadataValues = computed(() => {
             text-slate-500
           "
         >
-          Ada {{ metadataValues.jumlahKonsep }} konsep berbeda pada filter ini. Persempit filter untuk menampilkan satu konsep.
+          Ada {{ formatDisplayNumber(metadataValues.jumlahKonsep) }} konsep berbeda pada filter ini. Persempit filter untuk menampilkan satu konsep.
         </p>
 
         <p

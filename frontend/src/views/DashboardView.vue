@@ -10,6 +10,9 @@ import {
   CalendarRange
 } from 'lucide-vue-next'
 
+import ExportActions
+  from '../components/ExportActions.vue'
+
 import NeracaFilter
   from '../components/dashboard/NeracaFilter.vue'
 
@@ -32,8 +35,18 @@ import {
 } from '../utils/dashboardText.js'
 
 import {
-  formatDatabaseNumber
-} from '../utils/chartFormatters.js'
+  formatDisplayNumber
+} from '../utils/displayFormatters.js'
+
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  exportChartsPdf
+} from '../utils/reportExport.js'
+
+import {
+  publishChangedFilters
+} from '../composables/filterState.js'
 
 
 /*
@@ -51,6 +64,8 @@ const activeFilters = ref({
   klasifikasi: [],
   institusi: []
 })
+
+let previousSharedFilters = null
 
 
 /*
@@ -76,6 +91,7 @@ const backendSummary = ref({
 
 const summaryLoading = ref(false)
 const summaryError = ref('')
+const exportingDashboardPdf = ref(false)
 
 let summaryRequestId = 0
 
@@ -453,7 +469,7 @@ const totalNilai =
       return 'Tidak ada data'
     }
 
-    return formatDatabaseNumber(total)
+    return formatDisplayNumber(total)
   })
 
 
@@ -685,7 +701,8 @@ async function loadSummary() {
 */
 
 function handleFilterChange(
-  filters
+  filters,
+  metadata = {}
 ) {
   activeFilters.value = {
     periode:
@@ -715,6 +732,27 @@ function handleFilterChange(
     institusi:
       filters.institusi ||
       []
+  }
+
+  if (!metadata.initial) {
+    previousSharedFilters = publishChangedFilters(
+      previousSharedFilters,
+      activeFilters.value,
+      [
+      'periode',
+      'jenis',
+      'tahun',
+      'triwulan',
+      'neraca',
+      'klasifikasi'
+      ]
+    )
+  } else {
+    previousSharedFilters = publishChangedFilters(
+      null,
+      activeFilters.value,
+      []
+    )
   }
 
   loadSummary()
@@ -1002,6 +1040,87 @@ const jumlahBaris =
         .jumlahBaris
     ) || 0
   })
+
+function getDashboardExportContext() {
+  const filters = activeFilters.value
+  const mode = filters.periode === 'triwulanan'
+    ? 'triwulanan'
+    : 'tahunan'
+  const years = filters.tahun || []
+  const quarters = filters.triwulan || []
+  const period = [
+    ...years,
+    ...quarters.map(value => `Q${String(value).replace(/^Q/i, '')}`)
+  ].join('_') || 'semua-periode'
+
+  return {
+    mode,
+    period,
+    filters: {
+      Tahun: years,
+      Triwulan: quarters,
+      Jenis: filters.jenis || [],
+      Neraca: filters.neraca || [],
+      Klasifikasi: filters.klasifikasi || [],
+      Institusi: filters.institusi || []
+    }
+  }
+}
+
+function downloadDashboardCsv() {
+  if (institutionData.value.length === 0) {
+    alert('Tidak ada data institusi untuk diekspor.')
+    return
+  }
+
+  const context = getDashboardExportContext()
+  const filename = buildExportFilename({
+    page: 'dashboard',
+    ...context,
+    extension: 'csv'
+  })
+
+  downloadCsvFile(
+    filename,
+    ['Kode Institusi', 'Institusi', 'Nilai'],
+    institutionData.value.map(item => [
+      item.kode || '',
+      getInstitutionLabel(item),
+      item.nilai
+    ])
+  )
+}
+
+async function downloadDashboardPdf() {
+  if (exportingDashboardPdf.value) {
+    return
+  }
+
+  const context = getDashboardExportContext()
+  const charts = document.querySelectorAll('[data-pdf-chart="dashboard"]')
+
+  exportingDashboardPdf.value = true
+
+  try {
+    await exportChartsPdf({
+      filename: buildExportFilename({
+        page: 'dashboard',
+        ...context,
+        extension: 'pdf'
+      }),
+      reportTitle: 'BPS - Dashboard Neraca Sektoral',
+      mode: context.mode,
+      period: context.period,
+      filters: context.filters,
+      chartElements: charts
+    })
+  } catch (error) {
+    console.error('Gagal mengekspor PDF Dashboard:', error)
+    alert(error?.message || 'Gagal membuat PDF Dashboard.')
+  } finally {
+    exportingDashboardPdf.value = false
+  }
+}
 </script>
 
 
@@ -1372,6 +1491,16 @@ const jumlahBaris =
     :metadata-loading="summaryLoading"
   />
 
+  <div class="flex justify-end" data-html2canvas-ignore="true">
+    <ExportActions
+      :csv-disabled="summaryLoading || institutionData.length === 0"
+      :pdf-disabled="summaryLoading || (!hasDonutData && !hasRankingData)"
+      :pdf-busy="exportingDashboardPdf"
+      @csv="downloadDashboardCsv"
+      @pdf="downloadDashboardPdf"
+    />
+  </div>
+
         <!-- =================================================
              TOP CONTENT
         ================================================== -->
@@ -1540,6 +1669,8 @@ const jumlahBaris =
 
             <!-- CHART -->
             <div
+              :data-pdf-chart="hasDonutData ? 'dashboard' : null"
+              :data-pdf-title="hasDonutData ? 'Komposisi Institusi - Distribusi Nilai' : null"
               class="
                 h-[300px]
                 px-2
@@ -1849,6 +1980,8 @@ const jumlahBaris =
 
           <!-- CHART -->
           <div
+            :data-pdf-chart="hasRankingData ? 'dashboard' : null"
+            :data-pdf-title="hasRankingData ? 'Peringkat Institusi - Nilai Berdasarkan Institusi' : null"
             class="
               relative
               w-full

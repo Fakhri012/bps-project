@@ -1,6 +1,7 @@
 <script setup>
 import {
-  ref
+  ref,
+  toRef
 } from 'vue'
 
 import {
@@ -21,6 +22,11 @@ import {
   getTahunanAsset,
   getTriwulananAsset
 } from '../services/dashboardApi'
+
+import {
+  publishChangedFilters,
+  usePersistentFilterState
+} from '../composables/filterState.js'
 
 
 /*
@@ -68,6 +74,8 @@ const activeFilters =
     institusi: []
   })
 
+let previousSharedFilters = null
+
 
 /*
 |--------------------------------------------------------------------------
@@ -75,8 +83,13 @@ const activeFilters =
 |--------------------------------------------------------------------------
 */
 
+const { state: savedAssetUi } =
+  usePersistentFilterState('asset', {
+    search: ''
+  })
+
 const search =
-  ref('')
+  toRef(savedAssetUi, 'search')
 
 let searchTimer = null
 
@@ -294,7 +307,8 @@ async function loadAsset() {
 */
 
 function handleFilterChange(
-  filters
+  filters,
+  metadata = {}
 ) {
   activeFilters.value = {
     periode:
@@ -318,6 +332,27 @@ function handleFilterChange(
 
     institusi:
       filters.institusi || []
+  }
+
+  if (!metadata.initial) {
+    previousSharedFilters = publishChangedFilters(
+      previousSharedFilters,
+      activeFilters.value,
+      [
+      'periode',
+      'jenis',
+      'tahun',
+      'triwulan',
+      'neraca',
+      'klasifikasi'
+      ]
+    )
+  } else {
+    previousSharedFilters = publishChangedFilters(
+      null,
+      activeFilters.value,
+      []
+    )
   }
 
 

@@ -1,6 +1,7 @@
 <script setup>
 import {
   ref,
+  toRef,
   computed,
   watch,
   onMounted,
@@ -21,6 +22,19 @@ import {
   getTriwulananAssetFilters
 } from '../../services/dashboardApi'
 
+import {
+  usePersistentFilterState
+} from '../../composables/filterState.js'
+
+import {
+  formatDisplayNumber
+} from '../../utils/displayFormatters.js'
+
+import {
+  formatNeracaOptionLabel,
+  prioritizeSectorOptions
+} from '../../utils/dashboardText.js'
+
 
 /*
 |--------------------------------------------------------------------------
@@ -40,23 +54,30 @@ const emit =
 |--------------------------------------------------------------------------
 */
 
-const tahun =
-  ref([])
+const {
+  state: savedFilters,
+  hasSavedState
+} = usePersistentFilterState('timeSeries', {
+  tahun: [],
+  triwulan: [],
+  sisi: [],
+  neraca: [],
+  klasifikasi: [],
+  institusi: []
+}, {
+  tahun: 'tahun',
+  triwulan: 'triwulan',
+  sisi: 'jenis',
+  neraca: 'neraca',
+  klasifikasi: 'klasifikasi'
+})
 
-const triwulan =
-  ref([])
-
-const jenis =
-  ref([])
-
-const neraca =
-  ref([])
-
-const klasifikasi =
-  ref([])
-
-const institusi =
-  ref([])
+const tahun = toRef(savedFilters, 'tahun')
+const triwulan = toRef(savedFilters, 'triwulan')
+const jenis = toRef(savedFilters, 'sisi')
+const neraca = toRef(savedFilters, 'neraca')
+const klasifikasi = toRef(savedFilters, 'klasifikasi')
+const institusi = toRef(savedFilters, 'institusi')
 
   const isInitializing = ref(true)
 
@@ -294,16 +315,6 @@ function normalizeTextOptions(
 
   return Array.from(
     map.values()
-  ).sort(
-    (a, b) =>
-      a.label.localeCompare(
-        b.label,
-        'id',
-        {
-          numeric: true,
-          sensitivity: 'base'
-        }
-      )
   )
 }
 
@@ -339,10 +350,6 @@ function normalizeTahunOptions(
   return [
     ...new Set(values)
   ]
-    .sort(
-      (a, b) =>
-        a - b
-    )
     .map(
       item => ({
         value:
@@ -397,10 +404,6 @@ function normalizeTriwulanOptions(
   return [
     ...new Set(values)
   ]
-    .sort(
-      (a, b) =>
-        a - b
-    )
     .map(
       item => ({
         value:
@@ -600,7 +603,10 @@ async function loadFilterOptions() {
 
         triwulananFilters.neraca ||
         []
-      )
+      ).map(option => ({
+        ...option,
+        label: formatNeracaOptionLabel(option.value)
+      }))
 
 
     /*
@@ -626,12 +632,14 @@ async function loadFilterOptions() {
     */
 
     institusiOptions.value =
-      mergeOptions(
+      prioritizeSectorOptions(
+        mergeOptions(
         tahunanFilters.institusi ||
         [],
 
         triwulananFilters.institusi ||
         []
+        )
       )
 
   } catch (err) {
@@ -708,7 +716,8 @@ watch(
 
     emit(
       'change',
-      getCurrentFilters()
+      getCurrentFilters(),
+      { initial: true }
     )
 
     await loadFilterOptions()
@@ -725,14 +734,21 @@ onMounted(
   async () => {
     await loadFilterOptions()
 
-    tahun.value =
-      tahunOptions.value.map(
-        option => option.value
-      )
+    if (!hasSavedState) {
+      tahun.value =
+        tahunOptions.value.map(
+          option => option.value
+        )
+    }
 
     await nextTick()
 
     isInitializing.value = false
+
+    emit(
+      'change',
+      getCurrentFilters()
+    )
   }
 )
 </script>
@@ -829,7 +845,7 @@ onMounted(
                 text-teal-700
               "
             >
-              {{ activeCount }} aktif
+              {{ formatDisplayNumber(activeCount) }} aktif
             </span>
 
 

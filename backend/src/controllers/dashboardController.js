@@ -892,16 +892,7 @@ function generateAssetFilters(
           )
           .filter(Boolean)
       )
-    ].sort((a, b) =>
-      a.localeCompare(
-        b,
-        'id',
-        {
-          numeric: true,
-          sensitivity: 'base'
-        }
-      )
-    )
+    ]
   }
 
 
@@ -932,10 +923,8 @@ function generateAssetFilters(
           .filter(
             Number.isFinite
           )
-      )
-    ].sort(
-      (a, b) => a - b
-    )
+        )
+      ]
 
 
   /*
@@ -977,9 +966,7 @@ function generateAssetFilters(
               item <= 4
             )
         )
-      ].sort(
-        (a, b) => a - b
-      )
+      ]
   }
 
 
@@ -1134,15 +1121,6 @@ function generateAssetFilters(
   const institusi =
     Array.from(
       institusiMap.values()
-    ).sort((a, b) =>
-      a.label.localeCompare(
-        b.label,
-        'id',
-        {
-          numeric: true,
-          sensitivity: 'base'
-        }
-      )
     )
 
 
@@ -1759,8 +1737,57 @@ res.json({
   }
 }
 
-function getLandingNationalIndicators(data, latestPeriod) {
-  if (!latestPeriod) {
+function getLatestAnnualYear(data) {
+  let latestYear = null
+
+  data.forEach(item => {
+    const year = Number(item.tahun)
+    const hasQuarter =
+      item.triwulan !== null &&
+      item.triwulan !== undefined &&
+      String(item.triwulan).trim() !== ''
+
+    if (
+      !hasQuarter &&
+      Number.isInteger(year) &&
+      (latestYear === null || year > latestYear)
+    ) {
+      latestYear = year
+    }
+  })
+
+  return latestYear
+}
+
+function getPreviousAnnualYear(data, latestYear) {
+  if (!Number.isInteger(latestYear)) {
+    return null
+  }
+
+  let previousYear = null
+
+  data.forEach(item => {
+    const year = Number(item.tahun)
+    const hasQuarter =
+      item.triwulan !== null &&
+      item.triwulan !== undefined &&
+      String(item.triwulan).trim() !== ''
+
+    if (
+      !hasQuarter &&
+      Number.isInteger(year) &&
+      year < latestYear &&
+      (previousYear === null || year > previousYear)
+    ) {
+      previousYear = year
+    }
+  })
+
+  return previousYear
+}
+
+function getLandingNationalIndicators(data, latestYear) {
+  if (!Number.isInteger(latestYear)) {
     return []
   }
 
@@ -1768,24 +1795,19 @@ function getLandingNationalIndicators(data, latestPeriod) {
 
   data.forEach(item => {
     const year = Number(item.tahun)
-    const quarter = Number(item.triwulan)
+    const hasQuarter =
+      item.triwulan !== null &&
+      item.triwulan !== undefined &&
+      String(item.triwulan).trim() !== ''
     const sector = String(item.sektor ?? '').trim()
     const classification = String(item.rincian ?? '').trim()
 
     if (
       sector !== 'TOTAL EKN' ||
       !classification ||
-      year !== latestPeriod.year ||
-      (latestPeriod.frequency === 'tahunan' && !Number.isInteger(year)) ||
-      (
-        latestPeriod.frequency === 'triwulanan' &&
-        (
-          !Number.isInteger(quarter) ||
-          quarter < 1 ||
-          quarter > 4 ||
-          quarter !== latestPeriod.quarter
-        )
-      ) ||
+      !Number.isInteger(year) ||
+      year !== latestYear ||
+      hasQuarter ||
       item.nilai === null ||
       item.nilai === undefined ||
       (typeof item.nilai === 'string' && item.nilai.trim() === '')
@@ -1822,68 +1844,35 @@ async function getLandingOverview(
   res
 ) {
   try {
-    const [annualData, quarterlyData] = await Promise.all([
-      getCachedTahunanData(),
-      getCachedTriwulananData()
-    ])
-
-    let latestAnnualYear = null
-
-    annualData.forEach(item => {
-      const year = Number(item.tahun)
-
-      if (
-        Number.isInteger(year) &&
-        (latestAnnualYear === null || year > latestAnnualYear)
-      ) {
-        latestAnnualYear = year
-      }
-    })
-
-    const latestQuarter = quarterlyData.reduce((latest, item) => {
-      const year = Number(item.tahun)
-      const quarter = Number(item.triwulan)
-
-      if (
-        !Number.isInteger(year) ||
-        !Number.isInteger(quarter) ||
-        quarter < 1 ||
-        quarter > 4
-      ) {
-        return latest
-      }
-
-      return !latest || year * 10 + quarter > latest.year * 10 + latest.quarter
-        ? { year, quarter }
-        : latest
-    }, null)
-
-    const latestPeriod = latestQuarter && (
-      latestAnnualYear === null ||
-      latestQuarter.year >= latestAnnualYear
+    const annualData = await getCachedTahunanData()
+    const latestAnnualYear = getLatestAnnualYear(annualData)
+    const previousAnnualYear = getPreviousAnnualYear(
+      annualData,
+      latestAnnualYear
     )
-      ? {
-          frequency: 'triwulanan',
-          year: latestQuarter.year,
-          quarter: latestQuarter.quarter,
-          label: `${latestQuarter.year}/Q${latestQuarter.quarter}`
+    const latestPeriod = latestAnnualYear === null
+      ? null
+      : {
+          frequency: 'tahunan',
+          year: latestAnnualYear,
+          quarter: null,
+          label: String(latestAnnualYear)
         }
-      : latestAnnualYear !== null
-        ? {
-            frequency: 'tahunan',
-            year: latestAnnualYear,
-            quarter: null,
-            label: String(latestAnnualYear)
-          }
-        : null
-
-    const indicatorData = latestPeriod?.frequency === 'triwulanan'
-      ? quarterlyData
-      : annualData
     const nationalIndicators = getLandingNationalIndicators(
-      indicatorData,
-      latestPeriod
+      annualData,
+      latestAnnualYear
     )
+    const previousNationalIndicators = getLandingNationalIndicators(
+      annualData,
+      previousAnnualYear
+    )
+    const previousPeriod = previousAnnualYear === null
+      ? null
+      : {
+          frequency: 'tahunan',
+          year: previousAnnualYear,
+          label: String(previousAnnualYear)
+        }
 
     res.json({
       success: true,
@@ -1893,6 +1882,12 @@ async function getLandingOverview(
         sector: 'TOTAL EKN',
         period: latestPeriod?.label || null,
         values: nationalIndicators
+      },
+      previousPeriod,
+      previousNationalIndicators: {
+        sector: 'TOTAL EKN',
+        period: previousPeriod?.label || null,
+        values: previousNationalIndicators
       }
     })
   } catch (error) {
@@ -2224,6 +2219,8 @@ getTriwulananAssetFilters,
   getTahunanSummary,
   getTriwulananSummary,
   getLandingOverview,
+  getLatestAnnualYear,
+  getPreviousAnnualYear,
   getLandingNationalIndicators,
 
 
