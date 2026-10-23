@@ -152,7 +152,7 @@ npm run build
 
 The backend can be started with `npm --prefix backend start`. Configure `PORT` and the required Google credentials in the hosting environment. Build the frontend with `npm run build` and serve `frontend/dist` using the approved hosting platform. Set `VITE_API_BASE_URL` to the deployed API base URL when building the frontend; it is a public client-side URL, not a secret.
 
-The repository contains `backend/api/[...path].js`, a serverless adapter that forwards API paths to the Express application. On Vercel, configure the backend project root directory as `backend` and the frontend project root directory as `frontend`. Verify routing, environment variables, HTTPS, and allowed origins with the office infrastructure team before deployment.
+The backend uses Vercel's Express framework support to serve the Express application and its `/api` routes. Configure the backend project root directory as `backend` and the frontend project root directory as `frontend`. Verify routing, environment variables, HTTPS, and allowed origins with the office infrastructure team before deployment.
 
 ## Security and publication
 
