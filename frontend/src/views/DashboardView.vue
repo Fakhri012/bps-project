@@ -1445,61 +1445,33 @@ async function downloadDashboardPdf() {
 <!-- =================================================
      DASHBOARD DESCRIPTION
 ================================================== -->
-<div
-  class="
-    rounded-xl
-    border border-slate-200/80
-    border-l-4 border-l-cyan-500
-    bg-white
-    px-5
-    py-4
-    shadow-[0_4px_16px_rgba(15,23,42,0.04)]
-  "
->
-  <div class="min-w-0">
-    <!-- JUDUL -->
-    <h2
-      class="
-        text-base
-        font-bold
-        tracking-tight
-        text-slate-800
-      "
+
+  <div class="grid grid-cols-1 items-start gap-3 xl:grid-cols-3">
+    <!-- Kartu ringkasan: Total Nilai, Kontributor, Metadata -->
+    <div class="min-w-0 xl:col-span-3">
+      <NeracaSummary
+        :total-nilai="totalNilai"
+        :kontributor="kontributorTerbesar"
+        :metadata="backendSummary.metadata"
+        :metadata-loading="summaryLoading"
+      />
+    </div>
+
+    <!-- Export diposisikan di sebelah kiri -->
+    <div
+      class="flex justify-start"
+      data-html2canvas-ignore="true"
     >
-      {{ dashboardTitle }}
-    </h2>
-
-    <!-- DESKRIPSI -->
-    <p
-      class="
-        mt-1.5
-        max-w-5xl
-        text-[13px]
-        leading-6
-        text-slate-500
-      "
-    >
-      {{ dashboardDescription }}
-    </p>
+      <ExportActions
+        :csv-disabled="summaryLoading || institutionData.length === 0"
+        :pdf-disabled="summaryLoading || (!hasDonutData && !hasRankingData)"
+        :pdf-busy="exportingDashboardPdf"
+        @csv="downloadDashboardCsv"
+        @pdf="downloadDashboardPdf"
+      />
+    </div>
   </div>
-</div>
 
-  <NeracaSummary
-    :total-nilai="totalNilai"
-    :kontributor="kontributorTerbesar"
-    :metadata="backendSummary.metadata"
-    :metadata-loading="summaryLoading"
-  />
-
-  <div class="flex justify-end" data-html2canvas-ignore="true">
-    <ExportActions
-      :csv-disabled="summaryLoading || institutionData.length === 0"
-      :pdf-disabled="summaryLoading || (!hasDonutData && !hasRankingData)"
-      :pdf-busy="exportingDashboardPdf"
-      @csv="downloadDashboardCsv"
-      @pdf="downloadDashboardPdf"
-    />
-  </div>
 
         <!-- =================================================
              TOP CONTENT
