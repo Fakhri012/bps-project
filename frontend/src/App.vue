@@ -1,28 +1,18 @@
 <script setup>
 import {
+  computed,
   ref
 } from 'vue'
+import {
+  useRoute,
+  useRouter
+} from 'vue-router'
 
 import Sidebar
   from './components/layout/Sidebar.vue'
 
 import Header
   from './components/layout/Header.vue'
-
-import DashboardView
-  from './views/DashboardView.vue'
-
-import AssetView
-  from './views/AssetView.vue'
-
-import TimeSeriesView
-  from './views/TimeSeriesView.vue'
-
-import AnalisisRasioView
-  from './views/AnalisisRasioView.vue'
-
-import LandingView
-  from './views/LandingView.vue'
 
 /*
 |--------------------------------------------------------------------------
@@ -33,23 +23,16 @@ import LandingView
 |
 */
 
-const validMenus = [
-  'Landing',
-  'Dashboard',
-  'Database',
-  'Time Series',
-  'Analisis Rasio'
-]
-
-const savedMenu =
-  localStorage.getItem('activeMenu')
-
-const activeMenu =
-  ref(
-    validMenus.includes(savedMenu)
-      ? savedMenu
-      : 'Landing'
-  )
+const route = useRoute()
+const router = useRouter()
+const activeMenu = computed(() => route.meta.menu || 'Landing')
+const menuRoutes = {
+  Landing: 'home',
+  Dashboard: 'dashboard',
+  Database: 'database',
+  'Time Series': 'time-series',
+  'Analisis Rasio': 'analisis-rasio'
+}
 
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
@@ -86,33 +69,32 @@ function expandSidebar() {
 function handleMenuChange(
   menu
 ) {
-  activeMenu.value =
-    menu
-
   closeMobileSidebar()
 
-  localStorage.setItem(
-    'activeMenu',
-    menu
-  )
+  const routeName = menuRoutes[menu]
+
+  if (routeName && route.name !== routeName) {
+    router.push({ name: routeName })
+  }
 }
 </script>
 
 
 <template>
-  <LandingView
-    v-if="activeMenu === 'Landing'"
-    key="landing"
-    class="page-frame"
-    @select-menu="handleMenuChange"
-  />
+  <RouterView v-slot="{ Component, route }">
+    <component
+      :is="Component"
+      v-if="route.meta.layout === 'landing'"
+      class="page-frame"
+      @select-menu="handleMenuChange"
+    />
 
-  <div
-    v-else
-    key="application"
-    class="application-shell min-h-screen bg-slate-50"
-    :class="{ 'sidebar-collapsed': sidebarCollapsed }"
-  >
+    <div
+      v-else
+      key="application"
+      class="application-shell min-h-screen bg-slate-50"
+      :class="{ 'sidebar-collapsed': sidebarCollapsed }"
+    >
     <!--
     |--------------------------------------------------------------------------
     | SIDEBAR
@@ -192,130 +174,19 @@ function handleMenuChange(
              DASHBOARD
         ====================================================== -->
 
-        <div :key="activeMenu" class="view-frame">
-          <DashboardView
-            v-if="
-              activeMenu ===
-              'Dashboard'
-            "
-            key="dashboard"
-          />
+        <div :key="route.path" class="view-frame">
+          <component :is="Component" />
 
 
         <!-- =====================================================
              ASSET DATA
         ====================================================== -->
 
-          <AssetView
-            v-else-if="
-              activeMenu ===
-              'Database'
-            "
-            key="database"
-          />
-
-
-        <!-- =====================================================
-             TIME SERIES
-        ====================================================== -->
-
-          <TimeSeriesView
-            v-else-if="
-              activeMenu ===
-              'Time Series'
-            "
-            key="time-series"
-          />
-<!-- =====================================================
-     ANALISIS RASIO
-====================================================== -->
-
-          <AnalisisRasioView
-            v-else-if="
-              activeMenu ===
-              'Analisis Rasio'
-            "
-            key="analisis-rasio"
-          />
-
-        <!-- =====================================================
-             FALLBACK
-        ====================================================== -->
-
-          <div
-            v-else
-            key="fallback"
-            class="
-              flex
-              min-h-[420px]
-              items-center
-              justify-center
-            "
-          >
-          <div
-            class="
-              max-w-sm
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              px-8
-              py-10
-              text-center
-              shadow-sm
-            "
-          >
-            <!-- ICON / INITIAL -->
-            <div
-              class="
-                mx-auto
-                flex
-                h-11
-                w-11
-                items-center
-                justify-center
-                rounded-xl
-                bg-slate-100
-                text-lg
-                font-bold
-                text-slate-400
-              "
-            >
-              ?
-            </div>
-
-
-            <!-- TITLE -->
-            <h2
-              class="
-                mt-4
-                text-base
-                font-bold
-                text-slate-800
-              "
-            >
-              Halaman belum tersedia
-            </h2>
-
-
-            <!-- DESCRIPTION -->
-            <p
-              class="
-                mt-1.5
-                text-xs
-                leading-5
-                text-slate-400
-              "
-            >
-              Menu yang dipilih belum memiliki halaman
-              yang dapat ditampilkan.
-            </p>
-          </div>
-          </div>
         </div>
       </main>
     </div>
-  </div>
+    </div>
+  </RouterView>
 </template>
 
 <style>
