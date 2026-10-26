@@ -22,8 +22,7 @@ import {
 
 import {
   normalizeDisplayText,
-  formatNeracaOptionLabel,
-  prioritizeSectorOptions
+  formatNeracaOptionLabel
 } from '../../utils/dashboardText.js'
 
 import {
@@ -48,15 +47,6 @@ const emit = defineEmits([
 |--------------------------------------------------------------------------
 */
 
-const defaultInstitusi = [
-  'FC',
-  'NFC',
-  'HH',
-  'GG',
-  'NPISHS',
-  'ROW'
-]
-
 const { state: savedFilters } =
   usePersistentFilterState('dashboard', {
     periode: 'tahunan',
@@ -64,8 +54,7 @@ const { state: savedFilters } =
     tahun: [],
     triwulan: [],
     neraca: [],
-    klasifikasi: [],
-    institusi: [...defaultInstitusi]
+    klasifikasi: []
   }, {
     periode: 'periode',
     jenis: 'jenis',
@@ -81,7 +70,6 @@ const tahun = toRef(savedFilters, 'tahun')
 const triwulan = toRef(savedFilters, 'triwulan')
 const neraca = toRef(savedFilters, 'neraca')
 const klasifikasi = toRef(savedFilters, 'klasifikasi')
-const institusi = toRef(savedFilters, 'institusi')
 
 /*
 |--------------------------------------------------------------------------
@@ -94,7 +82,6 @@ const tahunOptions = ref([])
 const triwulanOptions = ref([])
 const neracaOptions = ref([])
 const klasifikasiOptions = ref([])
-const institusiOptions = ref([])
 
 
 /*
@@ -185,6 +172,25 @@ function normalizeTextOptions(
   })
 }
 
+function keepValidSelections(selection, options) {
+  const available = new Set(
+    options.map(option =>
+      String(
+        typeof option === 'object' && option !== null
+          ? option.value ?? option.kode ?? ''
+          : option
+      )
+    )
+  )
+  const valid = selection.value.filter(value =>
+    available.has(String(value))
+  )
+
+  if (valid.length !== selection.value.length) {
+    selection.value = valid
+  }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -197,6 +203,7 @@ function normalizeTextOptions(
 */
 
 let lastFilterKey = ''
+let initializing = true
 
 
 function createFilterKey() {
@@ -217,10 +224,7 @@ function createFilterKey() {
       [...neraca.value],
 
     klasifikasi:
-      [...klasifikasi.value],
-
-    institusi:
-      [...institusi.value]
+      [...klasifikasi.value]
   })
 }
 
@@ -243,10 +247,7 @@ function getCurrentFilters() {
       [...neraca.value],
 
     klasifikasi:
-      [...klasifikasi.value],
-
-    institusi:
-      [...institusi.value]
+      [...klasifikasi.value]
   }
 }
 
@@ -329,92 +330,6 @@ function normalizeTriwulanOptions(
 
 /*
 |--------------------------------------------------------------------------
-| NORMALISASI INSTITUSI
-|--------------------------------------------------------------------------
-|
-| NFC Private dan NFC Public tetap ada
-| di backend tetapi tidak ditampilkan
-| pada dashboard utama.
-|
-*/
-
-function normalizeInstitusiOptions(
-  options = []
-) {
-  const hiddenInstitutions = [
-    'NFC PRIVATE',
-    'NFC PUBLIC'
-  ]
-
-  return options
-    .map(item => {
-      if (
-        typeof item === 'object' &&
-        item !== null
-      ) {
-        const kode =
-          String(
-            item.kode ?? ''
-          ).trim()
-
-        const nama =
-          String(
-            item.nama ??
-            item.kode ??
-            ''
-          ).trim()
-
-        return {
-          value: kode,
-          label:
-            normalizeDisplayText(
-              nama
-            )
-        }
-      }
-
-      const value =
-        String(
-          item ?? ''
-        ).trim()
-
-      return {
-        value,
-
-        label:
-          normalizeDisplayText(
-            value
-          )
-      }
-    })
-
-    /*
-     * Buang data kosong.
-     */
-    .filter(
-      item =>
-        item.value !== ''
-    )
-
-    /*
-     * NFC Private dan NFC Public
-     * hanya disembunyikan dari UI.
-     */
-    .filter(item => {
-      const kode =
-        item.value
-          .trim()
-          .toUpperCase()
-
-      return !hiddenInstitutions.includes(
-        kode
-      )
-    })
-}
-
-
-/*
-|--------------------------------------------------------------------------
 | MEMBUAT FILTER UNTUK API
 |--------------------------------------------------------------------------
 */
@@ -431,10 +346,7 @@ function buildSelectedFilters() {
       neraca.value,
 
     klasifikasi:
-      klasifikasi.value,
-
-    institusi:
-      institusi.value
+      klasifikasi.value
   }
 
 
@@ -534,6 +446,7 @@ async function loadFilterOptions() {
     tahunOptions.value =
       (filters.tahun || [])
         .map(String)
+        .sort((first, second) => Number(second) - Number(first))
 
 
     /*
@@ -596,19 +509,15 @@ async function loadFilterOptions() {
     klasifikasiOptions.value =
       filters.klasifikasi || []
 
+    keepValidSelections(tahun, tahunOptions.value)
+    keepValidSelections(jenis, jenisOptions.value)
+    keepValidSelections(triwulan, triwulanOptions.value)
+    keepValidSelections(neraca, neracaOptions.value)
+    keepValidSelections(klasifikasi, klasifikasiOptions.value)
 
-    /*
-    |--------------------------------------------------------------------------
-    | INSTITUSI
-    |--------------------------------------------------------------------------
-    */
-
-    institusiOptions.value =
-      prioritizeSectorOptions(
-        normalizeInstitusiOptions(
-        filters.institusi || []
-        )
-      )
+    if (!tahun.value.length && tahunOptions.value.length > 0) {
+      tahun.value = [tahunOptions.value[0]]
+    }
 
   } catch (err) {
     console.error(
@@ -656,9 +565,7 @@ function setPeriode(value) {
   triwulan.value = []
   neraca.value = []
   klasifikasi.value = []
-institusi.value = [
-  ...defaultInstitusi
-]}
+}
 
 
 /*
@@ -696,9 +603,7 @@ function resetFilter() {
   triwulan.value = []
   neraca.value = []
   klasifikasi.value = []
-institusi.value = [
-  ...defaultInstitusi
-]}
+}
 
 
 /*
@@ -712,6 +617,15 @@ watch(
   () => {
     klasifikasi.value = []
   }
+)
+
+watch(
+  [tahun, jenis],
+  () => {
+    neraca.value = []
+    klasifikasi.value = []
+  },
+  { deep: true }
 )
 
 
@@ -729,6 +643,11 @@ watch(
     if (
       newKey === oldKey
     ) {
+      return
+    }
+
+    if (initializing) {
+      lastFilterKey = newKey
       return
     }
 
@@ -770,6 +689,12 @@ watch(
 */
 
 onMounted(async () => {
+  tahun.value = []
+  jenis.value = []
+  triwulan.value = []
+  neraca.value = []
+  klasifikasi.value = []
+
   /*
    * Simpan state awal.
    */
@@ -792,6 +717,8 @@ onMounted(async () => {
     getCurrentFilters(),
     { initial: true }
   )
+
+  initializing = false
 })
 </script>
 
@@ -992,8 +919,9 @@ onMounted(async () => {
       <MultiSelectFilter
         v-model="tahun"
         label="Tahun"
-        placeholder="Semua Tahun"
+        placeholder="Pilih Tahun"
         :options="tahunOptions"
+        single-select
       />
 
 
@@ -1119,15 +1047,6 @@ onMounted(async () => {
         :disabled="neraca.length === 0"
       />
 
-
-      <!-- INSTITUSI -->
-
-      <MultiSelectFilter
-        v-model="institusi"
-        label="Institusi"
-        placeholder="Semua Institusi"
-        :options="institusiOptions"
-      />
 
     </div>
 

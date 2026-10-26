@@ -25,7 +25,7 @@ import {
   formatDisplayNumber
 } from '../utils/displayFormatters.js'
 
-const OVERVIEW_CACHE_KEY = 'bps-dashboard-landing-overview.annual-comparison.v2'
+const OVERVIEW_CACHE_KEY = 'bps-dashboard-landing-overview.annual-comparison.v4'
 
 function readCachedOverview() {
   try {
@@ -80,8 +80,8 @@ const macroDefinitions = [
   },
   {
     key: 'loans',
-    label: 'Pinjaman',
-    classification: 'Pinjaman',
+    label: 'Net lending/net borrowing',
+    classification: 'Net lending/net borrowing',
   }
 ]
 

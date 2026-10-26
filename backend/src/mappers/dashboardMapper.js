@@ -55,12 +55,11 @@ const excludedDashboardSectors = [
 ]
 
 const defaultDashboardSectors = [
-  "FC",
-  "NFC",
-  "HH",
-  "GG",
-  "NPISHS",
-  "ROW",
+  'NFC',
+  'FC',
+  'GG',
+  'HH',
+  'NPISHS'
 ];
 /*
 |--------------------------------------------------------------------------
@@ -574,13 +573,17 @@ function mapTahunanData(rows) {
 | FC 2,NFC,ROW
 |
 */
-function getDashboardData(data, selectedFilters = {}) {
-  let dashboardData = data.filter((item) => {
+function getDashboardData(data, selectedFilters = {}, scope = 'sectors') {
+  let dashboardData = data.filter(item => {
+    if (scope === 'totalEkn') {
+      return item.sektor === 'TOTAL EKN'
+    }
+
     return (
       isDashboardSector(item.sektor) &&
       isDashboardInstitution(item.sektor)
-    );
-  });
+    )
+  })
 
   const selectedInstitusi = parseMultiFilter(
     selectedFilters.institusi
@@ -588,7 +591,7 @@ function getDashboardData(data, selectedFilters = {}) {
 
   // Jika tidak memilih institusi,
   // Dashboard hanya menampilkan 6 sektor default.
-  if (selectedInstitusi.length === 0) {
+  if (scope === 'sectors' && selectedInstitusi.length === 0) {
     dashboardData = dashboardData.filter((item) =>
       defaultDashboardSectors.includes(
         item.sektor.toUpperCase()
@@ -623,8 +626,8 @@ function parseMultiFilter(value) {
 |--------------------------------------------------------------------------
 */
 
-function filterTahunanData(data, selectedFilters = {}) {
-  let filteredData = getDashboardData(data, selectedFilters);
+function filterTahunanData(data, selectedFilters = {}, scope = 'sectors') {
+  let filteredData = getDashboardData(data, selectedFilters, scope)
 
   // sisanya tetap
 
@@ -752,6 +755,7 @@ function filterTahunanData(data, selectedFilters = {}) {
   */
 
   if (
+    scope === 'sectors' &&
     selectedFilters.institusi
   ) {
     const selectedInstitusi =
@@ -1170,6 +1174,8 @@ function generateSummaryFromFilteredData(filteredData) {
 
   const institusiMapResult =
     new Map()
+  const sektorKlasifikasiMap =
+    new Map()
 
   filteredData.forEach(
     (item) => {
@@ -1211,6 +1217,23 @@ function generateSummaryFromFilteredData(filteredData) {
 
       current.nilai +=
         item.nilai
+
+      const klasifikasi =
+        cleanText(item.rincian)
+
+      const sektorKlasifikasiKey =
+        JSON.stringify([kode, klasifikasi])
+
+      if (!sektorKlasifikasiMap.has(sektorKlasifikasiKey)) {
+        sektorKlasifikasiMap.set(sektorKlasifikasiKey, {
+          kode,
+          nama,
+          klasifikasi,
+          nilai: 0
+        })
+      }
+
+      sektorKlasifikasiMap.get(sektorKlasifikasiKey).nilai += item.nilai
     }
   )
 
@@ -1221,6 +1244,16 @@ function generateSummaryFromFilteredData(filteredData) {
       .sort(
         (a, b) =>
           b.nilai - a.nilai
+      )
+
+  const sektorKlasifikasi =
+    Array.from(sektorKlasifikasiMap.values())
+      .sort((first, second) =>
+        first.kode.localeCompare(second.kode, 'id', { sensitivity: 'base' }) ||
+        first.klasifikasi.localeCompare(second.klasifikasi, 'id', {
+          numeric: true,
+          sensitivity: 'base'
+        })
       )
 
   const totalNilai =
@@ -1253,9 +1286,22 @@ function generateSummaryFromFilteredData(filteredData) {
     kontributorTerbesar,
 
     institusi,
+    sektorKlasifikasi,
 
     metadata
   }
+}
+
+function calculateTotalEknValue(data) {
+  if (data.length === 0) {
+    return null
+  }
+
+  return data.reduce(
+    (total, item) =>
+      total + (Number(item.nilai) || 0),
+    0
+  )
 }
 
 function generateTahunanSummary(
@@ -1268,9 +1314,20 @@ function generateTahunanSummary(
       selectedFilters
     )
 
-  return generateSummaryFromFilteredData(
+  const totalEknData =
+    filterTahunanData(
+      data,
+      selectedFilters,
+      'totalEkn'
+    )
+
+  const summary = generateSummaryFromFilteredData(
     filteredData
   )
+
+  summary.totalNilai = calculateTotalEknValue(totalEknData)
+
+  return summary
 }
 
 
@@ -1572,14 +1629,15 @@ function mapTriwulananData(rows) {
 
 function filterTriwulananData(
   data,
-  selectedFilters = {}
+  selectedFilters = {},
+  scope = 'sectors'
 ) {
   /*
    * TOTAL dan TOTAL EKN
    * tidak digunakan pada output dashboard.
    */
 
-let filteredData = getDashboardData(data, selectedFilters);
+let filteredData = getDashboardData(data, selectedFilters, scope)
 
 
   /*
@@ -1737,6 +1795,7 @@ let filteredData = getDashboardData(data, selectedFilters);
       )
 
   if (
+    scope === 'sectors' &&
     selectedInstitusi.length > 0
   ) {
     filteredData =
@@ -2112,9 +2171,20 @@ function generateTriwulananSummary(
       selectedFilters
     )
 
-  return generateSummaryFromFilteredData(
+  const totalEknData =
+    filterTriwulananData(
+      data,
+      selectedFilters,
+      'totalEkn'
+    )
+
+  const summary = generateSummaryFromFilteredData(
     filteredData
   )
+
+  summary.totalNilai = calculateTotalEknValue(totalEknData)
+
+  return summary
 }
 
 /*

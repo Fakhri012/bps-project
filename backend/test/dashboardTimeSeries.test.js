@@ -327,12 +327,127 @@ test('quarterly classification data retains chronological periods separately', (
   )
 })
 
-test('landing overview selects the latest annual year and ignores quarterly rows', () => {
+test('landing overview selects source rows for five KPIs without aggregating net lending rows', () => {
   const rows = [
-    { tahun: 2024, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 100 },
-    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 10 },
-    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 2 },
-    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Tabungan bruto', nilai: 4 },
+    {
+      tahun: 2024,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Produksi',
+      kode: 'B1g',
+      rincian: 'Nilai tambah bruto',
+      nilai: 100
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Produksi',
+      kode: 'B1g',
+      rincian: 'Nilai tambah bruto',
+      nilai: 23821.1036
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'SUMBER',
+      jenisNeraca: 'Neraca Penciptaan Pendapatan',
+      kode: 'B1g',
+      rincian: 'Nilai tambah bruto',
+      nilai: 23821.1036
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Alokasi Pendapatan Primer',
+      kode: 'B5g',
+      rincian: 'Pendapatan nasional bruto (PNB)',
+      nilai: 23055.8046
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'SUMBER',
+      jenisNeraca: 'Neraca Distribusi Pendapatan Sekunder',
+      kode: 'B5g',
+      rincian: 'Pendapatan nasional bruto (PNB)',
+      nilai: 23055.8046
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Distribusi Pendapatan Sekunder',
+      kode: 'B6g',
+      rincian: 'Pendapatan disposabel bruto',
+      nilai: 23254.4491
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'SUMBER',
+      jenisNeraca: 'Neraca Penggunaan Pendapatan Disposabel',
+      kode: 'B6g',
+      rincian: 'Pendapatan disposabel bruto',
+      nilai: 23254.4491
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Penggunaan Pendapatan Disposabel',
+      kode: 'B8g',
+      rincian: 'Tabungan bruto',
+      nilai: 8303.8131
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Kapital',
+      kode: 'B9',
+      rincian: 'Net lending/net borrowing',
+      nilai: -10.8188
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Finansial',
+      kode: 'B9',
+      rincian: 'Net lending/net borrowing',
+      nilai: 0
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'SUMBER',
+      jenisNeraca: 'Neraca Kapital',
+      kode: 'B9',
+      rincian: 'Net lending/net borrowing',
+      nilai: 0
+    },
+    {
+      tahun: 2025,
+      sektor: 'TOTAL EKN',
+      sisi: 'SUMBER',
+      jenisNeraca: 'Neraca Finansial',
+      kode: 'B9',
+      rincian: 'Net lending/net borrowing',
+      nilai: 0
+    },
+    {
+      tahun: 2025,
+      sektor: 'NFC',
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Kapital',
+      kode: 'B9',
+      rincian: 'Net lending/net borrowing',
+      nilai: 50
+    },
+    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Pinjaman', nilai: 642.8548 },
+    { tahun: 2025, sektor: 'TOTAL EKN', rincian: 'Pinjaman', nilai: 668.1323 },
     { tahun: 2025, triwulan: 4, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 1000 },
     { tahun: 2026, triwulan: 1, sektor: 'TOTAL EKN', rincian: 'Nilai tambah bruto', nilai: 2000 },
     { tahun: 2025, sektor: 'FC', rincian: 'Nilai tambah bruto', nilai: 200 },
@@ -351,8 +466,12 @@ test('landing overview selects the latest annual year and ignores quarterly rows
   assert.deepEqual(
     getLandingNationalIndicators(rows, latestAnnualYear),
     [
-      { klasifikasi: 'Nilai tambah bruto', nilai: 12 },
-      { klasifikasi: 'Tabungan bruto', nilai: 4 }
+      { klasifikasi: 'Net lending/net borrowing', nilai: -10.8188 },
+      { klasifikasi: 'Nilai tambah bruto', nilai: 23821.1036 },
+      { klasifikasi: 'Pendapatan disposabel bruto', nilai: 23254.4491 },
+      { klasifikasi: 'Pendapatan nasional bruto (PNB)', nilai: 23055.8046 },
+      { klasifikasi: 'Pinjaman', nilai: 1310.9870999999998 },
+      { klasifikasi: 'Tabungan bruto', nilai: 8303.8131 }
     ]
   )
 

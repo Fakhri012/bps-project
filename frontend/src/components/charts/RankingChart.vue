@@ -24,16 +24,6 @@ const props = defineProps({
 })
 
 
-/*
-|--------------------------------------------------------------------------
-| SORT DATA
-|--------------------------------------------------------------------------
-|
-| Data dibuat ascending karena horizontal bar ECharts
-| menampilkan item terakhir di posisi paling atas.
-|
-*/
-
 const sortedData = computed(() => {
   return props.labels
     .map((label, index) => ({
@@ -43,10 +33,6 @@ const sortedData = computed(() => {
         props.values[index] || 0
       )
     }))
-    .sort(
-      (a, b) =>
-        a.value - b.value
-    )
 })
 
 /*
@@ -145,10 +131,10 @@ const option = computed(() => ({
   */
 
   grid: {
-    left: 24,
-    right: 44,
-    top: 12,
-    bottom: 30,
+    left: 18,
+    right: 36,
+    top: 16,
+    bottom: 28,
     containLabel: true
   },
 
@@ -207,6 +193,7 @@ formatter: value => {
 
   yAxis: {
     type: 'category',
+    inverse: true,
 
     data:
       sortedData.value.map(
@@ -222,16 +209,39 @@ formatter: value => {
     },
 
     axisLabel: {
-      color: '#334155',
-      fontSize: 12,
-      fontWeight: 600,
-
-      width: 145,
+      width: 180,
       overflow: 'break',
+      margin: 16,
+      formatter: value => {
+        const separator = value.indexOf(' — ')
 
-      margin: 14,
+        if (separator < 0) {
+          return value
+        }
 
-      lineHeight: 15
+        const sector = value.slice(0, separator)
+        const classification = value.slice(separator + 3)
+
+        return `{sector|${sector}}\n{classification|${classification}}`
+      },
+      rich: {
+        sector: {
+          color: '#0f766e',
+          fontSize: 10,
+          fontWeight: 700,
+          lineHeight: 18,
+          backgroundColor: '#e6f7f4',
+          borderRadius: 4,
+          padding: [2, 5]
+        },
+        classification: {
+          color: '#334155',
+          fontSize: 11,
+          fontWeight: 600,
+          lineHeight: 18,
+          padding: [2, 0]
+        }
+      }
     }
   },
 
@@ -248,33 +258,14 @@ formatter: value => {
 
       type: 'bar',
 
-      barWidth: 26,
+      barWidth: 22,
 
-
-      /*
-       * sortedData tersusun:
-       *
-       * kecil
-       * ↓
-       * besar
-       *
-       * Tetapi ECharts menampilkannya:
-       *
-       * besar  ← posisi visual pertama
-       * ↓
-       * kecil
-       *
-       * Karena itu visualIndex dibalik.
-       */
 
 data:
   sortedData.value.map(
     (item, index) => {
 
-      const visualIndex =
-        sortedData.value.length -
-        1 -
-        index
+      const visualIndex = index
 
       const absoluteValue =
         Math.abs(item.value)

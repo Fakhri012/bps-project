@@ -62,6 +62,11 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+
+  singleSelect: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -222,6 +227,14 @@ function toggleOption(value) {
   const normalizedValue =
     String(value)
 
+  if (props.singleSelect) {
+    if (!isSelected(normalizedValue)) {
+      emit('update:modelValue', [normalizedValue])
+    }
+
+    open.value = false
+    return
+  }
 
   if (
     isSelected(
@@ -508,7 +521,7 @@ onBeforeUnmount(() => {
 
 
       <button
-        v-if="modelValue.length > 0"
+        v-if="modelValue.length > 0 && !singleSelect"
         type="button"
          :disabled="disabled"
         @click.stop="clearSelection"
@@ -667,6 +680,7 @@ onBeforeUnmount(() => {
 
       <button
         v-if="
+          !singleSelect &&
           normalizedOptions.length > 0
         "
         type="button"
@@ -765,19 +779,20 @@ onBeforeUnmount(() => {
                      shrink-0
                      items-center
                      justify-center
-                     rounded
-                     border"
-              :class="
-                isSelected(
-                  item.value
-                )
-                  ? 'border-blue-600 bg-blue-600'
-                  : 'border-slate-300 bg-white'
-              "
+                     rounded"
+              :class="[
+                singleSelect ? 'rounded-full' : '',
+                isSelected(item.value)
+                  ? singleSelect
+                    ? 'border-4 border-blue-600 bg-white'
+                    : 'border border-blue-600 bg-blue-600'
+                  : 'border border-slate-300 bg-white'
+              ]"
             >
 
               <Check
                 v-if="
+                  !singleSelect &&
                   isSelected(
                     item.value
                   )
@@ -809,6 +824,7 @@ onBeforeUnmount(() => {
           <!-- TOMBOL HANYA -->
 
           <button
+            v-if="!singleSelect"
             type="button"
             @click.stop="
               selectOnly(
@@ -860,7 +876,8 @@ onBeforeUnmount(() => {
 
       <div
         v-if="
-          modelValue.length > 0
+          modelValue.length > 0 &&
+          !singleSelect
         "
         class="flex
                items-center

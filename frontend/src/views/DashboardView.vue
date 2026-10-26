@@ -65,6 +65,10 @@ const activeFilters = ref({
   institusi: []
 })
 
+const requiredFiltersComplete = computed(() => {
+  return activeFilters.value.klasifikasi.length > 0
+})
+
 let previousSharedFilters = null
 
 
@@ -76,9 +80,10 @@ let previousSharedFilters = null
 
 const backendSummary = ref({
   jumlahBaris: 0,
-  totalNilai: 0,
+  totalNilai: null,
   kontributorTerbesar: null,
   institusi: [],
+  sektorKlasifikasi: [],
   metadata: null
 })
 
@@ -101,8 +106,7 @@ let summaryRequestId = 0
 | LABEL INSTITUSI
 |--------------------------------------------------------------------------
 |
-| Donut dan Ranking menggunakan fungsi yang sama.
-| Jadi nama yang tampil selalu konsisten.
+| Donut memakai label sektor berdasarkan nama institusi.
 |
 */
 
@@ -252,6 +256,31 @@ const rankingInstitutionData =
       )
   })
 
+const rankingSectorClassificationData = computed(() => {
+  const data = backendSummary.value.sektorKlasifikasi || []
+  const sectorOrder = ['NFC', 'FC', 'GG', 'HH', 'NPISHS']
+
+  return data
+    .filter(item =>
+      item.nilai !== null &&
+      item.nilai !== undefined &&
+      item.nilai !== '' &&
+      Number.isFinite(Number(item.nilai))
+    )
+    .map(item => ({
+      ...item,
+      nilai: Number(item.nilai)
+    }))
+    .sort((first, second) =>
+      sectorOrder.indexOf(first.kode) - sectorOrder.indexOf(second.kode) ||
+      second.nilai - first.nilai ||
+      String(first.klasifikasi).localeCompare(String(second.klasifikasi), 'id', {
+        numeric: true,
+        sensitivity: 'base'
+      })
+    )
+})
+
 
 /*
 |--------------------------------------------------------------------------
@@ -286,7 +315,7 @@ const donutInstitutionData =
 const hasRankingData =
   computed(() => {
     return (
-      rankingInstitutionData
+      rankingSectorClassificationData
         .value
         .length > 0
     )
@@ -326,6 +355,10 @@ const hasNegativeValue =
         item.nilai < 0
     )
   })
+
+const hasNegativeRankingValue = computed(() =>
+  rankingSectorClassificationData.value.some(item => item.nilai < 0)
+)
 
 
 /*
@@ -375,13 +408,10 @@ const donutValues =
 
 const rankingLabels =
   computed(() => {
-    return rankingInstitutionData
+    return rankingSectorClassificationData
       .value
       .map(
-        item =>
-          getInstitutionLabel(
-            item
-          )
+        item => `${item.kode} — ${normalizeDisplayText(item.klasifikasi || '-')}`
       )
   })
 
@@ -394,7 +424,7 @@ const rankingLabels =
 
 const rankingValues =
   computed(() => {
-    return rankingInstitutionData
+    return rankingSectorClassificationData
       .value
       .map(
         item =>
@@ -451,17 +481,18 @@ const donutTotalPositif =
 
 const totalNilai =
   computed(() => {
+    const sourceTotal = backendSummary.value.totalNilai
+
     if (
-      !hasSummaryData.value
+      sourceTotal === null ||
+      sourceTotal === undefined ||
+      sourceTotal === ''
     ) {
       return 'Tidak ada data'
     }
 
     const total =
-      Number(
-        backendSummary.value
-          .totalNilai
-      )
+      Number(sourceTotal)
 
     if (
       !Number.isFinite(total)
@@ -535,11 +566,7 @@ function buildSummaryParams() {
 
     klasifikasi:
       activeFilters.value
-        .klasifikasi || [],
-
-    institusi:
-      activeFilters.value
-        .institusi || []
+        .klasifikasi || []
   }
 
   /*
@@ -578,6 +605,21 @@ function buildSummaryParams() {
 */
 
 async function loadSummary() {
+  if (!requiredFiltersComplete.value) {
+    summaryRequestId += 1
+    summaryLoading.value = false
+    summaryError.value = ''
+    backendSummary.value = {
+      jumlahBaris: 0,
+      totalNilai: 0,
+      kontributorTerbesar: null,
+      institusi: [],
+      sektorKlasifikasi: [],
+      metadata: null
+    }
+    return
+  }
+
   const currentRequestId =
     ++summaryRequestId
 
@@ -636,7 +678,7 @@ async function loadSummary() {
 
       totalNilai:
         summary.totalNilai ??
-        0,
+        null,
 
       kontributorTerbesar:
         summary
@@ -645,6 +687,10 @@ async function loadSummary() {
 
       institusi:
         summary.institusi ||
+        [],
+
+      sektorKlasifikasi:
+        summary.sektorKlasifikasi ||
         [],
 
       metadata:
@@ -676,9 +722,10 @@ async function loadSummary() {
 
     backendSummary.value = {
       jumlahBaris: 0,
-      totalNilai: 0,
+      totalNilai: null,
       kontributorTerbesar: null,
       institusi: [],
+      sektorKlasifikasi: [],
       metadata: null
     }
 
@@ -937,46 +984,7 @@ const klasifikasiSummary =
 */
 
 const sektorSummary =
-  computed(() => {
-    const selected =
-      activeFilters.value.institusi || []
-
-    const sektorMap = {
-      FC: 'Korporasi Finansial',
-      NFC: 'Korporasi Nonfinansial',
-      HH: 'Rumah Tangga',
-      GG: 'Pemerintah Umum',
-      NPISHS: 'LNPRT',
-      ROW: 'Luar Negeri',
-      ODC: 'Lembaga Keuangan Lainnya'
-    }
-
-    // Default: 6 sektor utama
-    if (selected.length === 0) {
-      return [
-        'Korporasi Finansial',
-        'Korporasi Nonfinansial',
-        'Rumah Tangga',
-        'Pemerintah Umum',
-        'LNPRT',
-        'Luar Negeri'
-      ].join(', ')
-    }
-
-    return selected
-      .map(item => {
-        const kode =
-          String(item)
-            .trim()
-            .toUpperCase()
-
-        return (
-          sektorMap[kode] ||
-          normalizeDisplayText(item)
-        )
-      })
-      .join(', ')
-  })
+  'Korporasi Nonfinansial, Korporasi Finansial, Pemerintah Umum, Rumah Tangga, dan LNPRT'
 
 
 const dashboardTitle =
@@ -992,41 +1000,9 @@ const dashboardDescription =
       `${tahunLabel.value.toLowerCase()}, ` +
       `${jenisSummary.value.toLowerCase()}, dan ` +
       `${klasifikasiSummary.value.toLowerCase()}, ` +
-      `dengan cakupan sektor ${sektorSummary.value}.`
+      `dengan cakupan sektor ${sektorSummary}.`
     )
   })
-/*
-|--------------------------------------------------------------------------
-| LABEL INSTITUSI
-|--------------------------------------------------------------------------
-*/
-
-const institusiSummary =
-  computed(() => {
-    const selected =
-      activeFilters.value
-        .institusi || []
-
-    if (
-      selected.length === 0
-    ) {
-      return 'Semua Institusi'
-    }
-
-    if (
-      selected.length === 1
-    ) {
-      return normalizeDisplayText(
-        selected[0]
-      )
-    }
-
-    return (
-      `${selected.length} Institusi`
-    )
-  })
-
-
 /*
 |--------------------------------------------------------------------------
 | JUMLAH BARIS
@@ -1227,7 +1203,7 @@ async function downloadDashboardPdf() {
             "
           >
             Ringkasan dan komposisi neraca sektoral berdasarkan periode, jenis,
-            klasifikasi, dan institusi.
+            neraca, dan klasifikasi untuk lima sektor penyusun Total EKN.
           </p>
         </div>
 
@@ -1442,6 +1418,15 @@ async function downloadDashboardPdf() {
           xl:col-span-9
         "
       >
+          <div
+            v-if="!requiredFiltersComplete"
+            role="status"
+            class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-600"
+          >
+            Silakan pilih filter hingga Neraca/Klasifikasi untuk menampilkan data.
+          </div>
+
+          <template v-else>
 <!-- =================================================
      DASHBOARD DESCRIPTION
 ================================================== -->
@@ -1540,7 +1525,7 @@ async function downloadDashboardPdf() {
                       text-slate-400
                     "
                   >
-                    Komposisi Institusi
+                    Komposisi Sektor
                   </p>
                 </div>
 
@@ -1553,7 +1538,7 @@ async function downloadDashboardPdf() {
                     text-slate-800
                   "
                 >
-                  Distribusi Nilai Berdasarkan Institusi
+                  Distribusi Nilai Berdasarkan Sektor
                 </h3>
 
 
@@ -1568,7 +1553,7 @@ async function downloadDashboardPdf() {
                     text-slate-400
                   "
                 >
-                  Proporsi nilai positif pada masing-masing institusi.
+                  Proporsi nilai positif pada masing-masing sektor.
                 </p>
               </div>
 
@@ -1790,7 +1775,7 @@ async function downloadDashboardPdf() {
                     text-slate-400
                   "
                 >
-                  Peringkat Institusi
+                  Perbandingan Sektor
                 </p>
               </div>
 
@@ -1803,7 +1788,7 @@ async function downloadDashboardPdf() {
                   text-slate-800
                 "
               >
-                Nilai Berdasarkan Institusi
+                Klasifikasi per Sektor
               </h3>
 
 
@@ -1831,7 +1816,7 @@ async function downloadDashboardPdf() {
                   }}
                 </span>
 
-                institusi berdasarkan nilai.
+                pasangan sektor-klasifikasi. Setiap klasifikasi tampil terpisah dan dikelompokkan berdasarkan sektor.
               </p>
             </div>
 
@@ -1870,13 +1855,13 @@ async function downloadDashboardPdf() {
                   "
                 ></span>
 
-                Nilai Institusi
+                Nilai (Triliun)
               </span>
 
 
               <span
                 v-if="
-                  hasNegativeValue
+                  hasNegativeRankingValue
                 "
                 class="
                   inline-flex
@@ -1909,9 +1894,9 @@ async function downloadDashboardPdf() {
 
           <!-- NEGATIVE INFO -->
           <div
-            v-if="
+              v-if="
               hasRankingData &&
-              hasNegativeValue
+              hasNegativeRankingValue
             "
             class="
               mx-5
@@ -1953,7 +1938,7 @@ async function downloadDashboardPdf() {
           <!-- CHART -->
           <div
             :data-pdf-chart="hasRankingData ? 'dashboard' : null"
-            :data-pdf-title="hasRankingData ? 'Peringkat Institusi - Nilai Berdasarkan Institusi' : null"
+            :data-pdf-title="hasRankingData ? 'Perbandingan Sektor dan Klasifikasi' : null"
             class="
               relative
               w-full
@@ -2043,12 +2028,13 @@ async function downloadDashboardPdf() {
                     text-slate-400
                   "
                 >
-                  Tidak terdapat nilai institusi untuk kombinasi filter yang dipilih.
+                  Tidak terdapat nilai sektor untuk kombinasi filter yang dipilih.
                 </p>
               </div>
             </div>
           </div>
         </div>
+        </template>
       </section>
     </div>
   </div>

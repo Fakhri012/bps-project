@@ -1791,6 +1791,33 @@ function getLandingNationalIndicators(data, latestYear) {
     return []
   }
 
+  const specificSources = {
+    'Nilai tambah bruto': {
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Produksi',
+      kode: 'B1g'
+    },
+    'Pendapatan nasional bruto (PNB)': {
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Alokasi Pendapatan Primer',
+      kode: 'B5g'
+    },
+    'Pendapatan disposabel bruto': {
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Distribusi Pendapatan Sekunder',
+      kode: 'B6g'
+    },
+    'Tabungan bruto': {
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Penggunaan Pendapatan Disposabel',
+      kode: 'B8g'
+    },
+    'Net lending/net borrowing': {
+      sisi: 'PENGGUNAAN',
+      jenisNeraca: 'Neraca Kapital',
+      kode: 'B9'
+    }
+  }
   const grouped = new Map()
 
   data.forEach(item => {
@@ -1818,6 +1845,23 @@ function getLandingNationalIndicators(data, latestYear) {
     const value = Number(item.nilai)
 
     if (!Number.isFinite(value)) {
+      return
+    }
+
+    const source = specificSources[classification]
+
+    if (source) {
+      const matchesSource =
+        String(item.sisi ?? '').trim().toLocaleUpperCase('id-ID') === source.sisi &&
+        String(item.jenisNeraca ?? '').trim().toLocaleLowerCase('id-ID') ===
+          source.jenisNeraca.toLocaleLowerCase('id-ID') &&
+        String(item.kode ?? '').trim().toLocaleUpperCase('id-ID') ===
+          source.kode.toLocaleUpperCase('id-ID')
+
+      if (matchesSource && !grouped.has(classification)) {
+        grouped.set(classification, value)
+      }
+
       return
     }
 

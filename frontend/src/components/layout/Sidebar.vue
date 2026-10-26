@@ -90,6 +90,9 @@ const menus = [
     name:
       'Dashboard',
 
+      label:
+      'Struktur',
+
     icon:
       LayoutDashboard
   },

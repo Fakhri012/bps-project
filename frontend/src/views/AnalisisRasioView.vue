@@ -150,6 +150,12 @@ const ratioTypes = [
   'IA/Output'
 ]
 
+function isExcludedRatioType(value) {
+  return String(value ?? '')
+    .replace(/\s+/g, '')
+    .toUpperCase() === 'PNB/PDB'
+}
+
 
 const ratioDescriptions = {
   'COE/VA':
@@ -184,6 +190,9 @@ async function loadData() {
       Array.isArray(response?.data)
         ? response.data
         : []
+
+    selectedJenisRasio.value = selectedJenisRasio.value
+      .filter(ratio => !isExcludedRatioType(ratio))
 
   } catch (err) {
 
@@ -567,7 +576,7 @@ const jenisRasioOptions = computed(() => {
           item =>
             item['JENIS RASIO']
         )
-        .filter(Boolean)
+        .filter(ratio => Boolean(ratio) && !isExcludedRatioType(ratio))
     )
   ]
 
@@ -575,8 +584,8 @@ const jenisRasioOptions = computed(() => {
 
 
 const displayedRatioTypes = computed(() =>
-  selectedJenisRasio.value.length > 0
-    ? selectedJenisRasio.value
+  selectedJenisRasio.value.some(ratio => !isExcludedRatioType(ratio))
+    ? selectedJenisRasio.value.filter(ratio => !isExcludedRatioType(ratio))
     : jenisRasioOptions.value
 )
 
@@ -596,6 +605,10 @@ const displayedRatioTypes = computed(() =>
 const filteredData = computed(() => {
 
   return data.value.filter(item => {
+
+    if (isExcludedRatioType(item['JENIS RASIO'])) {
+      return false
+    }
 
     const sektor = normalizeRatioSektor(item.SEKTOR)
 
@@ -1263,15 +1276,11 @@ const quarterlyChartRows =
 */
 
 function getActiveRatios() {
+  const selectedRatios =
+    selectedJenisRasio.value.filter(ratio => !isExcludedRatioType(ratio))
 
-  if (
-    selectedJenisRasio.value
-  ) {
-
-    return [
-      selectedJenisRasio.value
-    ]
-
+  if (selectedRatios.length > 0) {
+    return selectedRatios
   }
 
 
@@ -1842,8 +1851,10 @@ function setRatioChartMode(ratio, mode) {
 
 const charts = computed(() => {
 
-  const activeRatios = selectedJenisRasio.value.length > 0
-    ? selectedJenisRasio.value
+  const selectedRatios = selectedJenisRasio.value
+    .filter(ratio => !isExcludedRatioType(ratio))
+  const activeRatios = selectedRatios.length > 0
+    ? selectedRatios
     : jenisRasioOptions.value
 
 
@@ -3114,7 +3125,6 @@ onMounted(() => {
               { code: 'COE / VA', description: 'Kompensasi tenaga kerja terhadap nilai tambah bruto', accent: 'border-blue-500' },
               { code: 'PMTB / DI', description: 'Pembentukan modal tetap bruto terhadap pendapatan disposabel', accent: 'border-emerald-500' },
               { code: 'IA / OUTPUT', description: 'Alokasi investasi terhadap total output sektoral', accent: 'border-amber-500' },
-              { code: 'PNB / PDB', description: 'Pendapatan nasional bruto terhadap produk domestik bruto', accent: 'border-cyan-600' },
               { code: 'KMT / PMTB', description: 'Rasio pinjaman neto terhadap pembentukan modal tetap bruto', accent: 'border-orange-500' },
               { code: 'NET / NTB', description: 'Neraca neto sektoral terhadap nilai tambah bruto', accent: 'border-violet-500' }
             ]"

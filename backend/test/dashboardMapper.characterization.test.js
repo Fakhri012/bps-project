@@ -124,7 +124,7 @@ test('merges annual sector suffixes and preserves annual summary output', () => 
     mapper.generateTahunanSummary(mapped, {}),
     {
       jumlahBaris: 5,
-      totalNilai: 4959.12,
+      totalNilai: null,
       kontributorTerbesar: {
         kode: 'NFC',
         nama: 'Korporasi Nonfinansial',
@@ -147,6 +147,11 @@ test('merges annual sector suffixes and preserves annual summary output', () => 
           nilai: -10
         }
       ],
+      sektorKlasifikasi: [
+        { kode: 'FC', nama: 'Korporasi Finansial', klasifikasi: 'PENGGUNAAN', nilai: 2469.12 },
+        { kode: 'GG', nama: 'Pemerintah Umum', klasifikasi: 'PENGGUNAAN', nilai: -10 },
+        { kode: 'NFC', nama: 'Korporasi Nonfinansial', klasifikasi: 'PENGGUNAAN', nilai: 2500 }
+      ],
       metadata: {
         konsep: [],
         jumlahKonsep: 0,
@@ -158,7 +163,7 @@ test('merges annual sector suffixes and preserves annual summary output', () => 
   )
 })
 
-test('merges quarterly sector suffixes and preserves filtered summary output', () => {
+test('merges quarterly sector suffixes and reports no total without a TOTAL EKN row', () => {
   const mapped = mapper.mapTriwulananData([
     createRow('FC', '1.234,50', '2023/Q1'),
     createRow('FC 2', '25', '2023/Q1'),
@@ -192,7 +197,7 @@ test('merges quarterly sector suffixes and preserves filtered summary output', (
     ),
     {
       jumlahBaris: 4,
-      totalNilai: 3257.5,
+      totalNilai: null,
       kontributorTerbesar: {
         kode: 'NFC',
         nama: 'Korporasi Nonfinansial',
@@ -215,6 +220,11 @@ test('merges quarterly sector suffixes and preserves filtered summary output', (
           nilai: -2
         }
       ],
+      sektorKlasifikasi: [
+        { kode: 'FC', nama: 'Korporasi Finansial', klasifikasi: 'PENGGUNAAN', nilai: 1259.5 },
+        { kode: 'GG', nama: 'Pemerintah Umum', klasifikasi: 'PENGGUNAAN', nilai: -2 },
+        { kode: 'NFC', nama: 'Korporasi Nonfinansial', klasifikasi: 'PENGGUNAAN', nilai: 2000 }
+      ],
       metadata: {
         konsep: [],
         jumlahKonsep: 0,
@@ -234,14 +244,14 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
     { sektor: 'FC', institusi: 'Financial', nilai: '7', tahun: 2023, triwulan: 1 },
     { sektor: 'GG', institusi: 'Government', nilai: 0, tahun: 2023, triwulan: 1 },
     { sektor: 'GG', institusi: 'Government', nilai: 0, tahun: 2023, triwulan: 1 },
-    { sektor: 'ROW', institusi: 'Abroad', nilai: 0, tahun: 2023, triwulan: 1 },
+    { sektor: 'ROW', institusi: 'Abroad', nilai: 1000, tahun: 2023, triwulan: 1 },
     { sektor: 'HH', institusi: 'Household', nilai: -4, tahun: 2023, triwulan: 1 },
     { sektor: 'NFC PRIVATE', institusi: 'Private', nilai: 99, tahun: 2023, triwulan: 1 }
   ]
 
   const expected = {
-    jumlahBaris: 8,
-    totalNilai: -4,
+    jumlahBaris: 7,
+    totalNilai: null,
     kontributorTerbesar: {
       kode: 'GG',
       nama: 'Government',
@@ -254,21 +264,20 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
         nilai: 0
       },
       {
-        kode: 'ROW',
-        nama: 'Abroad',
-        nilai: 0
-      },
-      {
         kode: 'HH',
         nama: 'Household',
         nilai: -4
       }
     ],
+    sektorKlasifikasi: [
+      { kode: 'GG', nama: 'Government', klasifikasi: '', nilai: 0 },
+      { kode: 'HH', nama: 'Household', klasifikasi: '', nilai: -4 }
+    ],
     metadata: {
       konsep: [],
       jumlahKonsep: 0,
       periode: ['2023'],
-      sektor: ['FC', 'GG', 'HH', 'ROW'],
+      sektor: ['FC', 'GG', 'HH'],
       rincian: []
     }
   }
@@ -288,9 +297,10 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
 
   const emptySummary = {
     jumlahBaris: 0,
-    totalNilai: 0,
+    totalNilai: null,
     kontributorTerbesar: null,
     institusi: [],
+    sektorKlasifikasi: [],
     metadata: {
       konsep: [],
       jumlahKonsep: 0,
@@ -311,6 +321,109 @@ test('preserves summary handling for invalid values, ties, negatives, and empty 
       { tahun: '2023', triwulan: '1' }
     ),
     emptySummary
+  )
+})
+
+test('dashboard summary defaults to five Total EKN sectors and excludes ROW and totals', () => {
+  const rows = [
+    { sektor: 'NFC', institusi: 'NFC', nilai: 1, tahun: 2025 },
+    { sektor: 'FC', institusi: 'FC', nilai: 2, tahun: 2025 },
+    { sektor: 'GG', institusi: 'GG', nilai: 3, tahun: 2025 },
+    { sektor: 'HH', institusi: 'HH', nilai: 4, tahun: 2025 },
+    { sektor: 'NPISHS', institusi: 'LNPRT', nilai: 5, tahun: 2025 },
+    { sektor: 'ROW', institusi: 'Luar Negeri', nilai: 1000, tahun: 2025 },
+    { sektor: 'TOTAL EKN', institusi: 'TOTAL EKN', nilai: 10000, tahun: 2025 },
+    { sektor: 'TOTAL EKN', institusi: 'TOTAL EKN', nilai: 90000, tahun: 2024 }
+  ]
+
+  const summary = mapper.generateTahunanSummary(rows, { tahun: '2025' })
+
+  assert.equal(summary.jumlahBaris, 5)
+  assert.equal(summary.totalNilai, 10000)
+  assert.equal(
+    summary.institusi.reduce((sum, item) => sum + item.nilai, 0),
+    15
+  )
+  assert.deepEqual(
+    summary.metadata.sektor,
+    ['FC', 'GG', 'HH', 'NFC', 'NPISHS']
+  )
+})
+
+test('Total EKN uses the selected year, side, balance, and classification while sector details stay separate', () => {
+  const sectors = [
+    ['NFC', 10],
+    ['FC', 20],
+    ['GG', 30],
+    ['HH', 25],
+    ['NPISHS', 15]
+  ]
+  const additionalCodeValues = new Map([
+    ['NFC', 1],
+    ['FC', 2],
+    ['GG', 3],
+    ['HH', 4],
+    ['NPISHS', 5]
+  ])
+  const common = {
+    tahun: 2025,
+    sisi: 'PENGGUNAAN',
+    jenisNeraca: 'Neraca A',
+    kode: 'K1',
+    rincian: 'Rincian A',
+    neracaRincian: 'Balance A'
+  }
+  const rows = [
+    ...sectors.map(([sektor, nilai]) => ({ ...common, sektor, nilai })),
+    ...sectors.map(([sektor]) => ({
+      ...common,
+      sektor,
+      kode: 'K2',
+      nilai: additionalCodeValues.get(sektor)
+    })),
+    { ...common, sektor: 'ROW', nilai: 5000 },
+    { ...common, sektor: 'TOTAL EKN', nilai: 88 },
+    { ...common, sektor: 'TOTAL EKN', tahun: 2024, nilai: 99 },
+    { ...common, sektor: 'TOTAL EKN', sisi: 'SUMBER', nilai: 100 },
+    { ...common, sektor: 'TOTAL EKN', jenisNeraca: 'Neraca B', nilai: 101 },
+    { ...common, sektor: 'TOTAL EKN', kode: 'K2', nilai: 102 },
+    { ...common, sektor: 'TOTAL EKN', rincian: 'Rincian B', nilai: 103 }
+  ]
+
+  const summary = mapper.generateTahunanSummary(rows, {
+    tahun: '2025',
+    sisi: 'PENGGUNAAN',
+    neraca: 'Neraca A',
+    klasifikasi: 'Rincian A'
+  })
+
+  assert.equal(summary.totalNilai, 190)
+  assert.equal(summary.jumlahBaris, 10)
+  assert.equal(
+    summary.institusi.reduce((sum, item) => sum + item.nilai, 0),
+    115
+  )
+
+  const quarterlySummary = mapper.generateTriwulananSummary(
+    rows.map(row => ({
+      ...row,
+      triwulan: 1,
+      periode: '2025/Q1'
+    })),
+    {
+      tahun: '2025',
+      triwulan: '1',
+      sisi: 'PENGGUNAAN',
+      neraca: 'Neraca A',
+      klasifikasi: 'Rincian A'
+    }
+  )
+
+  assert.equal(quarterlySummary.totalNilai, 190)
+  assert.equal(quarterlySummary.jumlahBaris, 10)
+  assert.equal(
+    quarterlySummary.institusi.reduce((sum, item) => sum + item.nilai, 0),
+    115
   )
 })
 
@@ -449,4 +562,24 @@ test('preserves source order and first occurrence in filter options', () => {
       ]
     }
   )
+})
+
+test('summary keeps each sector and classification as a separate ranking entry', () => {
+  const rows = [
+    { sektor: 'NFC', institusi: 'Korporasi Nonfinansial', rincian: 'Klasifikasi A', nilai: 5 },
+    { sektor: 'NFC', institusi: 'Korporasi Nonfinansial', rincian: 'Klasifikasi A', nilai: 3 },
+    { sektor: 'NFC', institusi: 'Korporasi Nonfinansial', rincian: 'Klasifikasi B', nilai: 7 },
+    { sektor: 'FC', institusi: 'Korporasi Finansial', rincian: 'Klasifikasi A', nilai: 10 },
+    { sektor: 'GG', institusi: 'Pemerintah Umum', rincian: 'Klasifikasi B', nilai: -2 },
+    { sektor: 'ROW', institusi: 'Luar Negeri', rincian: 'Klasifikasi A', nilai: 1000 }
+  ]
+
+  const summary = mapper.generateTahunanSummary(rows, {})
+
+  assert.deepEqual(summary.sektorKlasifikasi, [
+    { kode: 'FC', nama: 'Korporasi Finansial', klasifikasi: 'Klasifikasi A', nilai: 10 },
+    { kode: 'GG', nama: 'Pemerintah Umum', klasifikasi: 'Klasifikasi B', nilai: -2 },
+    { kode: 'NFC', nama: 'Korporasi Nonfinansial', klasifikasi: 'Klasifikasi A', nilai: 8 },
+    { kode: 'NFC', nama: 'Korporasi Nonfinansial', klasifikasi: 'Klasifikasi B', nilai: 7 }
+  ])
 })

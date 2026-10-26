@@ -254,7 +254,7 @@ const metadataValues = computed(() => {
               text-slate-500
             "
           >
-            Total Nilai
+            Total EKN
           </p>
 
 

@@ -264,7 +264,7 @@ const option =
     series: [
       {
         name:
-          'Institusi',
+          'Sektor',
 
         type:
           'pie',
