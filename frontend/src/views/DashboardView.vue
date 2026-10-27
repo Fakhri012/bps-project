@@ -34,6 +34,10 @@ import {
 } from '../services/dashboardApi'
 
 import {
+  publishChangedFilters
+} from '../composables/filterState.js'
+
+import {
   normalizeDisplayText
 } from '../utils/dashboardText.js'
 
@@ -46,11 +50,6 @@ import {
   downloadCsvFile,
   exportChartsPdf
 } from '../utils/reportExport.js'
-
-import {
-  publishChangedFilters
-} from '../composables/filterState.js'
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,7 +72,6 @@ const requiredFiltersComplete = computed(() => {
 })
 
 let previousSharedFilters = null
-
 
 /*
 |--------------------------------------------------------------------------
@@ -809,11 +807,11 @@ function handleFilterChange(
       previousSharedFilters,
       activeFilters.value,
       [
-      'periode',
-      'jenis',
-      'triwulan',
-      'neraca',
-      'klasifikasi'
+        'periode',
+        'jenis',
+        'triwulan',
+        'neraca',
+        'klasifikasi'
       ]
     )
   } else {

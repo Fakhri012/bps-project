@@ -688,12 +688,6 @@ watch(
 */
 
 onMounted(async () => {
-  tahun.value = []
-  jenis.value = []
-  triwulan.value = []
-  neraca.value = []
-  klasifikasi.value = []
-
   /*
    * Simpan state awal.
    */

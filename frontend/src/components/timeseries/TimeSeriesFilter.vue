@@ -716,8 +716,7 @@ watch(
 
     emit(
       'change',
-      getCurrentFilters(),
-      { initial: true }
+      getCurrentFilters()
     )
 
     await loadFilterOptions()
