@@ -604,7 +604,9 @@ onBeforeUnmount(() => {
              left-0
              z-50
              w-full
-             overflow-y-auto
+              flex
+              flex-col
+              overflow-hidden
              rounded-xl
              border
              border-slate-200
@@ -622,6 +624,7 @@ onBeforeUnmount(() => {
 
       <div
         class="border-b
+               shrink-0
                border-slate-100
                p-2"
       >
@@ -685,6 +688,7 @@ onBeforeUnmount(() => {
         type="button"
         @click.stop="selectAll"
         class="flex w-full
+           shrink-0
                items-center
                gap-2.5
                border-b
@@ -733,7 +737,9 @@ onBeforeUnmount(() => {
       <!-- OPTIONS -->
 
       <div
-        class="max-h-56
+         class="max-h-56
+           min-h-0
+           flex-1
                overflow-y-auto
                p-1.5"
       >
@@ -879,6 +885,7 @@ onBeforeUnmount(() => {
           !singleSelect
         "
         class="flex
+           shrink-0
                items-center
                justify-between
                border-t

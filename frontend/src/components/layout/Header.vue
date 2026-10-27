@@ -293,14 +293,16 @@ onBeforeUnmount(() => {
   >
     <div
       class="
-        flex min-h-[88px]
+        flex min-h-[72px] xl:min-h-[88px]
         items-center
         justify-between
         gap-3
         px-3
-        sm:gap-6
+        sm:gap-3
         sm:px-6
-        lg:px-8
+        lg:px-5
+        xl:gap-6
+        xl:px-8
       "
     >
 
@@ -408,7 +410,7 @@ onBeforeUnmount(() => {
             rounded-xl
             border
             px-3 py-2
-            sm:flex
+            xl:flex
           "
           :class="
             cacheError
@@ -530,7 +532,7 @@ onBeforeUnmount(() => {
             hidden
             h-8 w-px
             bg-slate-200
-            sm:block
+            xl:block
           "
         ></div>
 

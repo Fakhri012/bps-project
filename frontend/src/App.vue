@@ -1,6 +1,8 @@
 <script setup>
 import {
   computed,
+  onBeforeUnmount,
+  onMounted,
   ref
 } from 'vue'
 import {
@@ -26,6 +28,10 @@ import Header
 const route = useRoute()
 const router = useRouter()
 const activeMenu = computed(() => route.meta.menu || 'Landing')
+const compactDesktopQuery = window.matchMedia(
+  '(min-width: 768px) and (max-width: 1279px)'
+)
+let wasCompactDesktop = compactDesktopQuery.matches
 const menuRoutes = {
   Landing: 'home',
   Dashboard: 'dashboard',
@@ -34,8 +40,25 @@ const menuRoutes = {
   'Analisis Rasio': 'analisis-rasio'
 }
 
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(wasCompactDesktop)
 const mobileSidebarOpen = ref(false)
+
+function syncSidebarForViewport() {
+  const isCompactDesktop = compactDesktopQuery.matches
+
+  if (isCompactDesktop !== wasCompactDesktop) {
+    sidebarCollapsed.value = isCompactDesktop
+    wasCompactDesktop = isCompactDesktop
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('resize', syncSidebarForViewport)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncSidebarForViewport)
+})
 
 function toggleSidebar() {
   if (window.matchMedia('(min-width: 768px)').matches) {
@@ -167,7 +190,8 @@ function handleMenuChange(
           min-h-[calc(100vh-64px)]
           p-3
           sm:p-6
-          lg:p-8
+          lg:p-5
+          xl:p-8
         "
       >
         <!-- =====================================================
