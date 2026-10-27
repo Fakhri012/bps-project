@@ -2,6 +2,7 @@
 import {
   ref,
   computed,
+  nextTick,
   onMounted,
   onBeforeUnmount
 } from 'vue'
@@ -88,7 +89,11 @@ const search = ref('')
 
 const containerRef = ref(null)
 
+const dropdownRef = ref(null)
+
 const openUpward = ref(false)
+
+const dropdownMaxHeight = ref('')
 
 
 /*
@@ -419,7 +424,7 @@ const allSelected =
 |--------------------------------------------------------------------------
 */
 
-function toggleDropdown() {
+async function toggleDropdown() {
   if (props.disabled) {
     return
   }
@@ -430,33 +435,25 @@ function toggleDropdown() {
   }
 
 
-  /*
-   * Tentukan dropdown
-   * buka ke atas / bawah.
-   */
+  openUpward.value = false
+  dropdownMaxHeight.value = ''
+  open.value = true
 
-  if (containerRef.value) {
-    const rect =
-      containerRef.value
-        .getBoundingClientRect()
+  await nextTick()
 
-
-    const spaceBelow =
-      window.innerHeight -
-      rect.bottom
-
-
-    const spaceAbove =
-      rect.top
-
-
-    openUpward.value =
-      spaceBelow < 300 &&
-      spaceAbove > spaceBelow
+  if (!containerRef.value || !dropdownRef.value) {
+    return
   }
 
+  const rect = containerRef.value.getBoundingClientRect()
+  const headerBottom = document.querySelector('header')
+    ?.getBoundingClientRect().bottom ?? 0
+  const spaceAbove = Math.max(0, rect.top - headerBottom - 8)
+  const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - 8)
+  const dropdownHeight = dropdownRef.value.scrollHeight
 
-  open.value = true
+  openUpward.value = dropdownHeight <= spaceAbove
+  dropdownMaxHeight.value = `${openUpward.value ? spaceAbove : spaceBelow}px`
 }
 
 
@@ -602,16 +599,18 @@ onBeforeUnmount(() => {
 
     <div
       v-if="open"
+      ref="dropdownRef"
       class="absolute
              left-0
              z-50
              w-full
-             overflow-hidden
+             overflow-y-auto
              rounded-xl
              border
              border-slate-200
              bg-white
              shadow-xl"
+          :style="{ maxHeight: dropdownMaxHeight }"
       :class="
         openUpward
           ? 'bottom-[calc(100%+8px)]'

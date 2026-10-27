@@ -1,5 +1,7 @@
 <script setup>
 import {
+  onBeforeUnmount,
+  onMounted,
   ref,
   computed
 } from 'vue'
@@ -26,6 +28,7 @@ import RankingChart
   from '../components/charts/RankingChart.vue'
 
 import {
+  CACHE_REFRESH_EVENT,
   getTahunanSummary,
   getTriwulananSummary
 } from '../services/dashboardApi'
@@ -740,6 +743,26 @@ async function loadSummary() {
   }
 }
 
+function reloadDashboardAfterCacheRefresh() {
+  if (requiredFiltersComplete.value) {
+    loadSummary()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener(
+    CACHE_REFRESH_EVENT,
+    reloadDashboardAfterCacheRefresh
+  )
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(
+    CACHE_REFRESH_EVENT,
+    reloadDashboardAfterCacheRefresh
+  )
+})
+
 
 /*
 |--------------------------------------------------------------------------
@@ -788,7 +811,6 @@ function handleFilterChange(
       [
       'periode',
       'jenis',
-      'tahun',
       'triwulan',
       'neraca',
       'klasifikasi'

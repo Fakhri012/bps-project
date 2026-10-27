@@ -13,6 +13,10 @@ async function withMockedGoogleSheets(valuesByRange, callback) {
   const mockConfig = new Module(configPath)
   mockConfig.filename = configPath
   mockConfig.loaded = true
+  const calls = {
+    batchGet: 0
+  }
+
   mockConfig.exports = {
     spreadsheets: {
       values: {
@@ -21,6 +25,17 @@ async function withMockedGoogleSheets(valuesByRange, callback) {
           return {
             data: {
               values: valuesByRange[range] || []
+            }
+          }
+        },
+        batchGet: async ({ spreadsheetId, ranges }) => {
+          assert.equal(spreadsheetId, 'test-sheet-id')
+          calls.batchGet += 1
+          return {
+            data: {
+              valueRanges: ranges.map(range => ({
+                values: valuesByRange[range] || []
+              }))
             }
           }
         }
@@ -33,7 +48,7 @@ async function withMockedGoogleSheets(valuesByRange, callback) {
   process.env.GOOGLE_SHEET_ID = 'test-sheet-id'
 
   try {
-    return await callback(require(servicePath))
+    return await callback(require(servicePath), calls)
   } finally {
     if (previousConfig) {
       require.cache[configPath] = previousConfig
@@ -149,6 +164,66 @@ test('maps pivot and ratio rows using their distinct required headers', async ()
         }
       ]
     )
+  })
+})
+
+test('reads all dashboard pivot sheets in one batch request', async () => {
+  const valuesByRange = {
+    "'Karakteristik & Pivot Tahunan'!E:M": [
+      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI', 'KONSEP'],
+      ['FC', '2025', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas', '10', '']
+    ],
+    "'Karakteristik & Pivot Triwulanan'!E:M": [
+      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI', 'KONSEP'],
+      ['FC', '2025/Q1', 'SUMBER', 'ASET', 'K1', 'Kas', 'Kas', '11', '']
+    ],
+    "'Karakteristik & Pivot Triwulan 2'!E:M": [
+      ['SEKTOR', 'TAHUN', 'SISI', 'JENIS NERACA', 'KODE', 'RINCIAN', 'NERACA - RINCIAN', 'NILAI', 'KONSEP'],
+      ['NFC', '2025/Q2', 'PENGGUNAAN', 'ASET', 'K2', 'Mesin', 'Mesin', '12', '']
+    ]
+  }
+
+  await withMockedGoogleSheets(valuesByRange, async (service, calls) => {
+    const data = await service.getDashboardData()
+
+    assert.equal(calls.batchGet, 1)
+    assert.deepEqual(data, {
+      tahunan: [{
+        SEKTOR: 'FC',
+        TAHUN: '2025',
+        SISI: 'SUMBER',
+        'JENIS NERACA': 'ASET',
+        KODE: 'K1',
+        RINCIAN: 'Kas',
+        'NERACA - RINCIAN': 'Kas',
+        NILAI: '10',
+        KONSEP: ''
+      }],
+      triwulanan: [
+        {
+          SEKTOR: 'FC',
+          TAHUN: '2025/Q1',
+          SISI: 'SUMBER',
+          'JENIS NERACA': 'ASET',
+          KODE: 'K1',
+          RINCIAN: 'Kas',
+          'NERACA - RINCIAN': 'Kas',
+          NILAI: '11',
+          KONSEP: ''
+        },
+        {
+          SEKTOR: 'NFC',
+          TAHUN: '2025/Q2',
+          SISI: 'PENGGUNAAN',
+          'JENIS NERACA': 'ASET',
+          KODE: 'K2',
+          RINCIAN: 'Mesin',
+          'NERACA - RINCIAN': 'Mesin',
+          NILAI: '12',
+          KONSEP: ''
+        }
+      ]
+    })
   })
 })
 

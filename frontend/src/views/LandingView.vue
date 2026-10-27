@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  onBeforeUnmount,
   onMounted,
   ref
 } from 'vue'
@@ -16,8 +17,11 @@ import {
 } from 'lucide-vue-next'
 
 import logoBps from '../assets/logo.png'
+import CacheRefreshButton
+  from '../components/CacheRefreshButton.vue'
 
 import {
+  CACHE_REFRESH_EVENT,
   getLandingOverview
 } from '../services/dashboardApi'
 
@@ -295,7 +299,24 @@ function openDashboard() {
   }, duration)
 }
 
-onMounted(loadOverview)
+function refreshOverviewAfterCacheUpdate() {
+  loadOverview()
+}
+
+onMounted(() => {
+  window.addEventListener(
+    CACHE_REFRESH_EVENT,
+    refreshOverviewAfterCacheUpdate
+  )
+  loadOverview()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(
+    CACHE_REFRESH_EVENT,
+    refreshOverviewAfterCacheUpdate
+  )
+})
 </script>
 
 <template>
@@ -312,7 +333,8 @@ onMounted(loadOverview)
           </div>
         </div>
 
-        <nav aria-label="Navigasi utama">
+        <nav class="flex flex-wrap items-center justify-center gap-2" aria-label="Navigasi utama">
+          <CacheRefreshButton variant="dark" />
           <button type="button" :disabled="dashboardOpening" class="inline-flex items-center gap-2 rounded-lg bg-[#0f9388] px-4 py-2.5 text-[11px] font-bold text-white shadow-lg shadow-black/15 transition hover:bg-[#0d8078] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a4d3ff] disabled:cursor-wait sm:text-xs" @click="openDashboard">
             <LayoutDashboard :size="14" />
             {{ dashboardOpening ? 'Membuka…' : 'Buka Dashboard' }}

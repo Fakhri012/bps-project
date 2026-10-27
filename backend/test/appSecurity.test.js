@@ -17,6 +17,17 @@ test('API disables caching and only reflects approved development origins', asyn
     const deniedResponse = await fetch(`${baseUrl}/api/health`, {
       headers: { Origin: 'https://unapproved.example' }
     })
+    const unapprovedRefreshResponse = await fetch(
+      `${baseUrl}/api/dashboard/cache/refresh`,
+      {
+        method: 'POST',
+        headers: { Origin: 'https://unapproved.example' }
+      }
+    )
+    const missingOriginRefreshResponse = await fetch(
+      `${baseUrl}/api/dashboard/cache/refresh`,
+      { method: 'POST' }
+    )
 
     assert.equal(allowedResponse.status, 200)
     assert.equal(
@@ -36,6 +47,8 @@ test('API disables caching and only reflects approved development origins', asyn
       deniedResponse.headers.get('access-control-allow-origin'),
       null
     )
+    assert.equal(unapprovedRefreshResponse.status, 403)
+    assert.equal(missingOriginRefreshResponse.status, 403)
   } finally {
     await new Promise((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve())

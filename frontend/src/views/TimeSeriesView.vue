@@ -1,5 +1,7 @@
 <script setup>
 import {
+  onBeforeUnmount,
+  onMounted,
   ref,
   computed,
   nextTick
@@ -12,6 +14,7 @@ import {
 } from 'lucide-vue-next'
 
 import {
+  CACHE_REFRESH_EVENT,
   getTahunanTimeSeries,
   getTriwulananTimeSeries
 } from '../services/dashboardApi'
@@ -461,7 +464,6 @@ async function loadTimeSeries(
         []
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | FILTER TRIWULANAN
@@ -629,6 +631,26 @@ async function loadTimeSeries(
     }
   }
 }
+
+function reloadTimeSeriesAfterCacheRefresh() {
+  if (hasAppliedFilters.value) {
+    loadTimeSeries(activeFilters.value)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener(
+    CACHE_REFRESH_EVENT,
+    reloadTimeSeriesAfterCacheRefresh
+  )
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(
+    CACHE_REFRESH_EVENT,
+    reloadTimeSeriesAfterCacheRefresh
+  )
+})
 
 
 /*

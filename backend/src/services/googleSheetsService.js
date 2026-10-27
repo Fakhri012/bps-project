@@ -24,6 +24,16 @@ const TRIWULANAN_SHEET_2 =
 const ANALISIS_RASIO_SHEET =
   'Analisis Rasio'
 
+const PIVOT_HEADERS = [
+  'SEKTOR',
+  'TAHUN',
+  'SISI',
+  'JENIS NERACA',
+  'KODE',
+  'RINCIAN',
+  'NILAI'
+]
+
 /*
 |--------------------------------------------------------------------------
 | HELPER MEMBACA PIVOT
@@ -73,17 +83,58 @@ async function getPivotData(
 
   return mapSheetRowsToObjects(
     rows,
-    [
-      'SEKTOR',
-      'TAHUN',
-      'SISI',
-      'JENIS NERACA',
-      'KODE',
-      'RINCIAN',
-      'NILAI'
-    ],
+    PIVOT_HEADERS,
     sheetName
   )
+}
+
+async function getDashboardData() {
+  const spreadsheetId =
+    process.env.GOOGLE_SHEET_ID
+
+  if (!spreadsheetId) {
+    throw new Error(
+      'GOOGLE_SHEET_ID belum diatur'
+    )
+  }
+
+  const response =
+    await sheets.spreadsheets.values.batchGet({
+      spreadsheetId,
+      ranges: [
+        `'${TAHUNAN_SHEET}'!E:M`,
+        `'${TRIWULANAN_SHEET}'!E:M`,
+        `'${TRIWULANAN_SHEET_2}'!E:M`
+      ]
+    })
+
+  const valueRanges =
+    response.data.valueRanges || []
+
+  const tahunanData =
+    mapSheetRowsToObjects(
+      valueRanges[0]?.values || [],
+      PIVOT_HEADERS,
+      TAHUNAN_SHEET
+    )
+
+  const triwulananData = [
+    mapSheetRowsToObjects(
+      valueRanges[1]?.values || [],
+      PIVOT_HEADERS,
+      TRIWULANAN_SHEET
+    ),
+    mapSheetRowsToObjects(
+      valueRanges[2]?.values || [],
+      PIVOT_HEADERS,
+      TRIWULANAN_SHEET_2
+    )
+  ].flat()
+
+  return {
+    tahunan: tahunanData,
+    triwulanan: triwulananData
+  }
 }
 
 
@@ -179,5 +230,6 @@ async function getAnalisisRasioData() {
 module.exports = {
   getTahunanData,
   getTriwulananData,
+  getDashboardData,
   getAnalisisRasioData
 }

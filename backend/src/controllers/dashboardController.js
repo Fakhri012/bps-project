@@ -3,9 +3,7 @@
 const {
   getCachedTahunanData,
   getCachedTriwulananData,
-
-  clearTahunanCache,
-  clearTriwulananCache,
+  refreshDashboardCache,
 
   getTahunanCacheInfo,
   getTriwulananCacheInfo
@@ -2172,45 +2170,34 @@ async function refreshCache(
   res
 ) {
   try {
-    /*
-     * Bersihkan kedua cache.
-     */
-
-    clearTahunanCache()
-
-    clearTriwulananCache()
-
-
-
-
-    const [
-      tahunanData,
-      triwulananData
-    ] = await Promise.all([
-      getCachedTahunanData(),
-      getCachedTriwulananData()
-    ])
-
+    const result =
+      await refreshDashboardCache()
 
     res.json({
       success: true,
 
       message:
         'Cache Tahunan dan Triwulanan berhasil diperbarui',
-
-      total: {
-        tahunan:
-          tahunanData.length,
-
-        triwulanan:
-          triwulananData.length
-      }
+      ...result
     })
   } catch (error) {
+    if (error.status === 429) {
+      res.setHeader(
+        'Retry-After',
+        String(error.retryAfterSeconds)
+      )
+
+      return res.status(429).json({
+        success: false,
+        message: error.message,
+        retryAfterSeconds: error.retryAfterSeconds
+      })
+    }
+
     return sendInternalServerError(
       res,
       'Refresh cache',
-      'Gagal memperbarui cache',
+      'Gagal memperbarui cache dari Google Sheets. Cache sebelumnya tetap digunakan jika tersedia.',
       error
     )
   }

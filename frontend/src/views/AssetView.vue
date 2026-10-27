@@ -1,5 +1,7 @@
 <script setup>
 import {
+  onBeforeUnmount,
+  onMounted,
   ref,
   toRef
 } from 'vue'
@@ -19,6 +21,7 @@ import AssetTable
   from '../components/assets/AssetTable.vue'
 
 import {
+  CACHE_REFRESH_EVENT,
   getTahunanAsset,
   getTriwulananAsset
 } from '../services/dashboardApi'
@@ -298,6 +301,24 @@ async function loadAsset() {
     }
   }
 }
+
+function reloadAssetAfterCacheRefresh() {
+  loadAsset()
+}
+
+onMounted(() => {
+  window.addEventListener(
+    CACHE_REFRESH_EVENT,
+    reloadAssetAfterCacheRefresh
+  )
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(
+    CACHE_REFRESH_EVENT,
+    reloadAssetAfterCacheRefresh
+  )
+})
 
 
 /*

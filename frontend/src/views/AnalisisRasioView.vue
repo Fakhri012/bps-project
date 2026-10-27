@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  onBeforeUnmount,
   onMounted,
   nextTick,
   ref,
@@ -39,6 +40,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers'
 
 import {
+  CACHE_REFRESH_EVENT,
   getAnalisisRasio
 } from '../services/dashboardApi'
 
@@ -1986,9 +1988,19 @@ watch(
 */
 
 onMounted(() => {
-
+  window.addEventListener(
+    CACHE_REFRESH_EVENT,
+    loadData
+  )
   loadData()
 
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(
+    CACHE_REFRESH_EVENT,
+    loadData
+  )
 })
 </script>
 

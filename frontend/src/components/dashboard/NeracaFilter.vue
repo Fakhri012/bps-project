@@ -58,7 +58,6 @@ const { state: savedFilters } =
   }, {
     periode: 'periode',
     jenis: 'jenis',
-    tahun: 'tahun',
     triwulan: 'triwulan',
     neraca: 'neraca',
     klasifikasi: 'klasifikasi'

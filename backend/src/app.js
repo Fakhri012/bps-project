@@ -2,19 +2,12 @@ const express = require('express')
 const cors = require('cors')
 const dashboardRoutes = require('./routes/dashboardRoutes')
 const analisisRasioRoutes = require('./routes/analisisRasioRoutes')
+const getAllowedOrigins = require('./config/allowedOrigins')
 
 const app = express()
 app.disable('x-powered-by')
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  ...(process.env.NODE_ENV === 'production'
-    ? []
-    : [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173'
-      ])
-].filter(Boolean)
+const allowedOrigins = getAllowedOrigins()
 
 app.use(cors({ origin: allowedOrigins }))
 

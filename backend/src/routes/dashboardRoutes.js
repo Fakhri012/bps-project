@@ -1,5 +1,7 @@
 const express =
   require('express')
+const getAllowedOrigins =
+  require('../config/allowedOrigins')
 
 
 const {
@@ -60,6 +62,19 @@ const {
 
 const router =
   express.Router()
+
+function requireAllowedRefreshOrigin(req, res, next) {
+  const origin = req.get('origin')
+
+  if (!origin || !getAllowedOrigins().includes(origin)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Permintaan refresh harus berasal dari aplikasi yang diizinkan.'
+    })
+  }
+
+  return next()
+}
 
 
 /*
@@ -198,6 +213,7 @@ router.get(
 
 router.post(
   '/cache/refresh',
+  requireAllowedRefreshOrigin,
   refreshCache
 )
 

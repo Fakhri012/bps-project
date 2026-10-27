@@ -14,8 +14,12 @@ import {
 } from 'lucide-vue-next'
 
 import {
+  CACHE_REFRESH_EVENT,
   getCacheInfo
 } from '../../services/dashboardApi'
+
+import CacheRefreshButton
+  from '../CacheRefreshButton.vue'
 
 defineProps({
   mobileSidebarOpen: {
@@ -246,6 +250,11 @@ let cacheInterval = null
 
 
 onMounted(async () => {
+  window.addEventListener(
+    CACHE_REFRESH_EVENT,
+    loadCacheInfo
+  )
+
   await loadCacheInfo()
 
   cacheInterval =
@@ -257,6 +266,11 @@ onMounted(async () => {
 
 
 onBeforeUnmount(() => {
+  window.removeEventListener(
+    CACHE_REFRESH_EVENT,
+    loadCacheInfo
+  )
+
   if (cacheInterval) {
     clearInterval(
       cacheInterval
@@ -382,6 +396,8 @@ onBeforeUnmount(() => {
         "
       >
 
+        <CacheRefreshButton compact />
+
         <!-- GOOGLE SHEETS -->
 
         <div
@@ -506,7 +522,6 @@ onBeforeUnmount(() => {
           </div>
 
         </div>
-
 
         <!-- DIVIDER -->
 

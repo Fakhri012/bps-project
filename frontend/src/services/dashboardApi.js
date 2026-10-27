@@ -30,6 +30,8 @@ const api = axios.create({
   timeout: 30000
 })
 
+export const CACHE_REFRESH_EVENT = 'bps-dashboard-cache-refreshed'
+
 const analisisRasioApi = axios.create({
   baseURL:
     import.meta.env.VITE_API_BASE_URL
@@ -251,6 +253,12 @@ export async function refreshCache() {
     await api.post(
       '/cache/refresh'
     )
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent(CACHE_REFRESH_EVENT)
+    )
+  }
 
   return response.data
 }

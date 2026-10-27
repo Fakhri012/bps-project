@@ -1,6 +1,7 @@
 const {
   getTahunanData,
-  getTriwulananData
+  getTriwulananData,
+  getDashboardData
 } = require('./googleSheetsService')
 
 const {
@@ -14,12 +15,14 @@ const {
 | CACHE TTL
 |--------------------------------------------------------------------------
 |
-| 3 menit
+| 5 menit
 |
 */
 
 const CACHE_TTL =
   5 * 60 * 1000
+const MANUAL_REFRESH_MIN_INTERVAL =
+  60 * 1000
 
 
 /*
@@ -48,6 +51,8 @@ let triwulananCache = {
 }
 
 let triwulananLoadingPromise = null
+let manualRefreshPromise = null
+let lastManualRefreshAt = null
 
 
 /*
@@ -79,6 +84,19 @@ function isCacheValid(cache) {
 */
 
 async function getCachedTahunanData() {
+  if (manualRefreshPromise) {
+    return manualRefreshPromise.then(
+      () => tahunanCache.data,
+      error => {
+        if (tahunanCache.data) {
+          return tahunanCache.data
+        }
+
+        throw error
+      }
+    )
+  }
+
   if (
     isCacheValid(
       tahunanCache
@@ -159,6 +177,19 @@ async function getCachedTahunanData() {
 */
 
 async function getCachedTriwulananData() {
+  if (manualRefreshPromise) {
+    return manualRefreshPromise.then(
+      () => triwulananCache.data,
+      error => {
+        if (triwulananCache.data) {
+          return triwulananCache.data
+        }
+
+        throw error
+      }
+    )
+  }
+
   if (
     isCacheValid(
       triwulananCache
@@ -208,6 +239,65 @@ async function warmDashboardCache() {
     getCachedTahunanData(),
     getCachedTriwulananData()
   ])
+}
+
+async function refreshDashboardCache() {
+  if (manualRefreshPromise) {
+    return manualRefreshPromise
+  }
+
+  const now = Date.now()
+  const retryAfterMs = lastManualRefreshAt === null
+    ? 0
+    : lastManualRefreshAt +
+      MANUAL_REFRESH_MIN_INTERVAL -
+      now
+
+  if (retryAfterMs > 0) {
+    const error = new Error(
+      `Refresh manual dapat dilakukan kembali dalam ${Math.ceil(retryAfterMs / 1000)} detik.`
+    )
+    error.status = 429
+    error.retryAfterSeconds = Math.ceil(retryAfterMs / 1000)
+    throw error
+  }
+
+  lastManualRefreshAt = now
+
+  manualRefreshPromise = (async () => {
+    try {
+      await Promise.allSettled([
+        tahunanLoadingPromise,
+        triwulananLoadingPromise
+      ].filter(Boolean))
+
+      const rawData = await getDashboardData()
+      const tahunanData = mapTahunanData(rawData.tahunan)
+      const triwulananData = mapTriwulananData(rawData.triwulanan)
+      const loadedAt = Date.now()
+
+      tahunanCache = {
+        data: tahunanData,
+        loadedAt
+      }
+      triwulananCache = {
+        data: triwulananData,
+        loadedAt
+      }
+
+      return {
+        refreshedAt: new Date(loadedAt).toISOString(),
+        total: {
+          tahunan: tahunanData.length,
+          triwulanan: triwulananData.length
+        }
+      }
+    } finally {
+      manualRefreshPromise = null
+    }
+  })()
+
+  return manualRefreshPromise
 }
 
 
@@ -329,6 +419,7 @@ module.exports = {
   getCachedTahunanData,
   getCachedTriwulananData,
   warmDashboardCache,
+  refreshDashboardCache,
 
   clearTahunanCache,
   clearTriwulananCache,
