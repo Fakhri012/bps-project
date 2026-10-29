@@ -1016,7 +1016,7 @@ const dashboardTitle =
 const dashboardDescription =
   computed(() => {
     return (
-      `Menampilkan data neraca sektoral untuk ` +
+      `Menampilkan data neraca institusi terintegrasi untuk ` +
       `${tahunLabel.value.toLowerCase()}, ` +
       `${jenisSummary.value.toLowerCase()}, dan ` +
       `${klasifikasiSummary.value.toLowerCase()}, ` +
@@ -1222,7 +1222,7 @@ async function downloadDashboardPdf() {
               text-slate-500
             "
           >
-            Ringkasan dan komposisi neraca sektoral berdasarkan periode, jenis,
+            Ringkasan dan komposisi Neraca Institusi Terintegrasi berdasarkan periode, jenis,
             neraca, dan klasifikasi untuk lima sektor penyusun Total EKN.
           </p>
         </div>

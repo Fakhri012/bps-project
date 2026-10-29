@@ -79,7 +79,7 @@ const triwulananKlasifikasiData =
   ref([])
 
 const chartMode =
-  ref('both')
+  ref('annual')
 
 
 /*
@@ -151,12 +151,7 @@ async function setChartMode(
 const showAnnual =
   computed(
     () => {
-      return (
-        chartMode.value ===
-          'both' ||
-        chartMode.value ===
-          'annual'
-      )
+      return chartMode.value === 'annual'
     }
   )
 
@@ -164,12 +159,7 @@ const showAnnual =
 const showQuarterly =
   computed(
     () => {
-      return (
-        chartMode.value ===
-          'both' ||
-        chartMode.value ===
-          'quarterly'
-      )
+      return chartMode.value === 'quarterly'
     }
   )
 
@@ -786,23 +776,9 @@ function handleFilterChange(
 */
 
 function getExportModeName() {
-  if (
-    chartMode.value ===
-    'annual'
-  ) {
-    return 'tahunan'
-  }
-
-
-  if (
-    chartMode.value ===
-    'quarterly'
-  ) {
-    return 'triwulanan'
-  }
-
-
-  return 'tahunan-triwulanan'
+  return chartMode.value === 'quarterly'
+    ? 'triwulanan'
+    : 'tahunan'
 }
 
 function getExportFilters() {
@@ -825,7 +801,7 @@ function getExportPeriod() {
     return quarterlyRange.value
   }
 
-  return `Tahunan ${annualRange.value}; Triwulanan ${quarterlyRange.value}`
+  return annualRange.value
 }
 
 function getExportFilename(extension) {
@@ -875,12 +851,7 @@ function downloadTimeSeriesCsv() {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      chartMode.value ===
-        'both' ||
-      chartMode.value ===
-        'annual'
-    ) {
+    if (chartMode.value === 'annual') {
       tahunanData.value.forEach(
         item => {
           rows.push(
@@ -915,12 +886,7 @@ function downloadTimeSeriesCsv() {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      chartMode.value ===
-        'both' ||
-      chartMode.value ===
-        'quarterly'
-    ) {
+    if (chartMode.value === 'quarterly') {
       triwulananData.value.forEach(
         item => {
           rows.push(
@@ -1474,39 +1440,6 @@ async function downloadTimeSeriesPdf() {
             p-1
           "
         >
-          <!-- BOTH -->
-
-          <button
-            type="button"
-            class="
-              rounded-md
-              px-3.5
-              py-1.5
-              text-[10px]
-              font-semibold
-              transition-all
-              duration-200
-            "
-            :class="
-              chartMode === 'both'
-                ? `
-                    bg-white
-                    text-slate-800
-                    shadow-sm
-                  `
-                : `
-                    text-slate-500
-                    hover:text-slate-700
-                  `
-            "
-            @click="
-              setChartMode('both')
-            "
-          >
-            Keduanya
-          </button>
-
-
           <!-- ANNUAL -->
 
           <button
@@ -1621,20 +1554,8 @@ async function downloadTimeSeriesPdf() {
         grid-cols-1
         gap-4
       "
-      :class="
-        chartMode === 'both'
-          ? 'xl:grid-cols-2'
-          : 'xl:grid-cols-1'
-      "
     >
       <div
-        v-for="
-          item in
-          chartMode === 'both'
-            ? 2
-            : 1
-        "
-        :key="item"
         class="
           h-[390px]
           min-w-0
@@ -1689,11 +1610,6 @@ async function downloadTimeSeriesPdf() {
         w-full
         grid-cols-1
         gap-4
-      "
-      :class="
-        chartMode === 'both'
-          ? 'xl:grid-cols-2'
-          : 'xl:grid-cols-1'
       "
     >
       <!-- ===================================================

@@ -245,17 +245,22 @@ const metadataValues = computed(() => {
         <!-- CONTENT -->
         <div class="min-w-0">
 
-          <p
-            class="
-              text-[10px]
-              font-bold
-              uppercase
-              tracking-[0.12em]
-              text-slate-500
-            "
-          >
-            Total EKN
-          </p>
+          <div>
+            <p
+              class="
+                text-[10px]
+                font-bold
+                uppercase
+                tracking-[0.12em]
+                text-slate-500
+              "
+            >
+              Total EKN
+            </p>
+            <p class="mt-1 max-w-[220px] text-[9px] leading-4 text-slate-400">
+              Agregat dari baris sumber TOTAL EKN sesuai filter aktif; rincian sektor tampil terpisah.
+            </p>
+          </div>
 
 
           <h3

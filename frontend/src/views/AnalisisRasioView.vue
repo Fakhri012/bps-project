@@ -59,6 +59,8 @@ import {
 } from '../utils/dashboardText.js'
 
 import {
+  buildRatioCsvExportData,
+  canExportRatioCsv,
   getRatioTypesForSectors,
   normalizeRatioSektor
 } from '../utils/ratioAnalysis.js'
@@ -119,7 +121,7 @@ const selectedPeriode = toRef(savedFilters, 'periode')
 
 const selectedJenisRasio = toRef(savedFilters, 'jenisRasio')
 
-const ratioChartModes = ref({})
+const ratioChartMode = ref('Tahunan')
 
 const activeFilterCount = computed(() =>
   selectedSektor.value.length +
@@ -891,6 +893,15 @@ const searchedTable = computed(() => {
   })
 
 })
+
+
+const canExportCsv = computed(() =>
+  canExportRatioCsv({
+    loading: loading.value,
+    sectors: selectedSektor.value,
+    rowCount: searchedTable.value.length
+  })
+)
 
 
 function getTableSortValue(row, key) {
@@ -1830,55 +1841,75 @@ function createChartOption(chartData, isQuarterly) {
 }
 
 
-function setRatioChartMode(ratio, mode) {
-
-  ratioChartModes.value = {
-    ...ratioChartModes.value,
-    [ratio]: mode
-  }
-
+function hasRatioChartData(chartData) {
+  return chartData.rows.some(row =>
+    chartData.sectors.some(sector => row[sector] !== null)
+  )
 }
 
 
-const charts = computed(() => {
-
+const chartDataByRatio = computed(() => {
   const selectedRatios = selectedJenisRasio.value
     .filter(ratio => !isExcludedRatioType(ratio))
   const activeRatios = selectedRatios.length > 0
     ? selectedRatios
     : jenisRasioOptions.value
 
-
   return activeRatios
-    .map(ratio => {
-      const annualChartData = buildChartRows(annualData.value, ratio)
-      const quarterlyChartData = buildChartRows(quarterlyData.value, ratio)
-      const hasData = chartData => chartData.rows.some(row =>
-        chartData.sectors.some(sector => row[sector] !== null)
-      )
-      const availableModes = [
-        ...(hasData(annualChartData) ? ['Tahunan'] : []),
-        ...(hasData(quarterlyChartData) ? ['Triwulanan'] : [])
-      ]
+    .map(ratio => ({
+      ratio,
+      annualChartData: buildChartRows(annualData.value, ratio),
+      quarterlyChartData: buildChartRows(quarterlyData.value, ratio)
+    }))
+})
 
-      if (availableModes.length === 0) {
+
+const availableRatioChartModes = computed(() => [
+  ...(chartDataByRatio.value.some(item => hasRatioChartData(item.annualChartData))
+    ? ['Tahunan']
+    : []),
+  ...(chartDataByRatio.value.some(item => hasRatioChartData(item.quarterlyChartData))
+    ? ['Triwulanan']
+    : [])
+])
+
+
+const selectedRatioChartMode = computed(() =>
+  availableRatioChartModes.value.includes(ratioChartMode.value)
+    ? ratioChartMode.value
+    : availableRatioChartModes.value[0] || 'Tahunan'
+)
+
+
+watch(availableRatioChartModes, modes => {
+  if (modes.length > 0 && !modes.includes(ratioChartMode.value)) {
+    ratioChartMode.value = modes[0]
+  }
+})
+
+
+function setRatioChartMode(mode) {
+  ratioChartMode.value = mode
+}
+
+
+const charts = computed(() => {
+  const quarterly = selectedRatioChartMode.value === 'Triwulanan'
+
+  return chartDataByRatio.value
+    .map(item => {
+      const chartData = quarterly
+        ? item.quarterlyChartData
+        : item.annualChartData
+
+      if (!hasRatioChartData(chartData)) {
         return null
       }
 
-      const selectedMode = ratioChartModes.value[ratio] || 'Tahunan'
-      const periodLabel = availableModes.includes(selectedMode)
-        ? selectedMode
-        : availableModes[0]
-      const quarterly = periodLabel === 'Triwulanan'
-      const chartData = quarterly
-        ? quarterlyChartData
-        : annualChartData
-
       return {
-        key: ratio,
-        ratio,
-        periodLabel,
-        availableModes,
+        key: item.ratio,
+        ratio: item.ratio,
+        periodLabel: selectedRatioChartMode.value,
         chartData,
         hasData: true,
         option: createChartOption(chartData, quarterly)
@@ -1904,12 +1935,14 @@ function getRatioExportContext() {
 }
 
 function downloadAnalysisCsv() {
-  const ratios = tableRatioTypes.value
-  const rows = sortedTable.value.map(row => [
-    row.periode,
-    row.sektor,
-    ...ratios.map(ratio => row.values[ratio] ?? '')
-  ])
+  if (!canExportCsv.value) {
+    return
+  }
+
+  const { headers, rows } = buildRatioCsvExportData(
+    sortedTable.value,
+    tableRatioTypes.value
+  )
 
   if (rows.length === 0) {
     alert('Tidak ada baris tabel yang sesuai untuk diekspor.')
@@ -1923,7 +1956,7 @@ function downloadAnalysisCsv() {
       ...context,
       extension: 'csv'
     }),
-    ['Periode', 'Sektor', ...ratios],
+    headers,
     rows
   )
 }
@@ -2044,7 +2077,7 @@ onBeforeUnmount(() => {
 
         <ExportActions
           class="shrink-0"
-          :csv-disabled="loading || searchedTable.length === 0"
+          :csv-disabled="!canExportCsv"
           :pdf-disabled="loading || !charts.some(chart => chart.hasData)"
           :pdf-busy="exportingRatioPdf"
           @csv="downloadAnalysisCsv"
@@ -2924,7 +2957,47 @@ onBeforeUnmount(() => {
            CHART TAHUNAN
       ==================================================== -->
 
-      <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+      <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-xs font-semibold text-slate-500">
+          Frekuensi grafik rasio
+        </p>
+        <div
+          v-if="availableRatioChartModes.length > 1"
+          class="inline-flex w-fit rounded-lg bg-slate-100 p-1"
+          role="group"
+          aria-label="Frekuensi semua grafik rasio"
+        >
+          <button
+            v-for="mode in availableRatioChartModes"
+            :key="mode"
+            type="button"
+            class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
+            :class="selectedRatioChartMode === mode
+              ? 'bg-white text-teal-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'"
+            :aria-pressed="selectedRatioChartMode === mode"
+            @click="setRatioChartMode(mode)"
+          >
+            {{ mode }}
+          </button>
+        </div>
+        <span
+          v-else-if="availableRatioChartModes.length === 1"
+          class="text-[10px] font-semibold text-slate-500"
+        >
+          {{ availableRatioChartModes[0] }}
+        </span>
+      </div>
+
+      <p
+        v-if="charts.length === 0"
+        role="status"
+        class="rounded-lg border border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-500"
+      >
+        Tidak ada grafik rasio untuk frekuensi dan filter yang dipilih.
+      </p>
+
+      <div v-else class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
 
       <section
         v-for="chart in charts"
@@ -2983,42 +3056,6 @@ onBeforeUnmount(() => {
                 {{ ratioDescriptions[chart.ratio] || chart.ratio }}
               </p>
 
-            </div>
-
-            <div
-              class="
-                inline-flex
-                w-fit
-                shrink-0
-                rounded-lg
-                bg-slate-100
-                p-1
-              "
-            >
-              <button
-                v-if="chart.availableModes.includes('Tahunan')"
-                type="button"
-                class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
-                :class="chart.periodLabel === 'Tahunan'
-                  ? 'bg-white text-teal-700 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'"
-                :aria-pressed="chart.periodLabel === 'Tahunan'"
-                @click="setRatioChartMode(chart.ratio, 'Tahunan')"
-              >
-                Tahunan
-              </button>
-              <button
-                v-if="chart.availableModes.includes('Triwulanan')"
-                type="button"
-                class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
-                :class="chart.periodLabel === 'Triwulanan'
-                  ? 'bg-white text-cyan-700 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'"
-                :aria-pressed="chart.periodLabel === 'Triwulanan'"
-                @click="setRatioChartMode(chart.ratio, 'Triwulanan')"
-              >
-                Triwulanan
-              </button>
             </div>
 
           </div>

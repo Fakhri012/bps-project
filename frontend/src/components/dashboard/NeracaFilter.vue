@@ -91,6 +91,7 @@ const klasifikasiOptions = ref([])
 
 const loading = ref(false)
 const error = ref(null)
+const invalidSelectionNotice = ref('')
 
 let requestId = 0
 
@@ -508,6 +509,25 @@ async function loadFilterOptions() {
     klasifikasiOptions.value =
       filters.klasifikasi || []
 
+    const availableBalances = new Set(
+      neracaOptions.value.map(option => String(option.value))
+    )
+    const availableClassifications = new Set(
+      klasifikasiOptions.value.map(String)
+    )
+    const invalidSelections = [
+      ...neraca.value
+        .filter(value => !availableBalances.has(String(value)))
+        .map(value => `Neraca ${formatNeracaOptionLabel(value)}`),
+      ...klasifikasi.value
+        .filter(value => !availableClassifications.has(String(value)))
+        .map(value => `Klasifikasi ${value}`)
+    ]
+
+    invalidSelectionNotice.value = invalidSelections.length > 0
+      ? `${invalidSelections.join(', ')} tidak tersedia untuk filter tahun/periode saat ini dan telah dihapus. Silakan pilih ulang.`
+      : ''
+
     keepValidSelections(tahun, tahunOptions.value)
     keepValidSelections(jenis, jenisOptions.value)
     keepValidSelections(triwulan, triwulanOptions.value)
@@ -558,6 +578,7 @@ function setPeriode(value) {
   }
 
   periode.value = value
+  invalidSelectionNotice.value = ''
 
   jenis.value = []
   tahun.value = []
@@ -574,6 +595,8 @@ function setPeriode(value) {
 */
 
 function toggleJenis(item) {
+  invalidSelectionNotice.value = ''
+
   if (
     jenis.value.includes(item)
   ) {
@@ -597,6 +620,8 @@ function toggleJenis(item) {
 */
 
 function resetFilter() {
+  invalidSelectionNotice.value = ''
+
   jenis.value = []
   tahun.value = []
   triwulan.value = []
@@ -619,7 +644,7 @@ watch(
 )
 
 watch(
-  [tahun, jenis],
+  jenis,
   () => {
     neraca.value = []
     klasifikasi.value = []
@@ -903,6 +928,15 @@ onMounted(async () => {
     </div>
 
 
+    <div
+      v-if="invalidSelectionNotice"
+      role="status"
+      class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800"
+    >
+      {{ invalidSelectionNotice }}
+    </div>
+
+
     <!-- FILTER -->
 
     <div class="space-y-5">
@@ -911,6 +945,7 @@ onMounted(async () => {
 
       <MultiSelectFilter
         v-model="tahun"
+        @update:model-value="invalidSelectionNotice = ''"
         label="Tahun"
         placeholder="Pilih Tahun"
         :options="tahunOptions"
@@ -1020,6 +1055,7 @@ onMounted(async () => {
 
       <MultiSelectFilter
         v-model="neraca"
+        @update:model-value="invalidSelectionNotice = ''"
         label="Neraca"
         placeholder="Semua Neraca"
         :options="neracaOptions"
@@ -1030,6 +1066,7 @@ onMounted(async () => {
 
       <MultiSelectFilter
         v-model="klasifikasi"
+        @update:model-value="invalidSelectionNotice = ''"
         label="Klasifikasi"
         :placeholder="
           neraca.length > 0

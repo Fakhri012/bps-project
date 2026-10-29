@@ -4,7 +4,6 @@ import {
   nextTick,
   onBeforeUnmount,
   onMounted,
-  ref,
   watch
 } from 'vue'
 
@@ -53,8 +52,6 @@ const frequency = computed(() =>
     : 'annual'
 )
 
-const sectorFrequencies = ref({})
-
 const sectors = computed(() => {
   const source =
     props.selectedSectors.length > 0
@@ -82,8 +79,7 @@ const sectors = computed(() => {
 
 const panels = computed(() =>
   sectors.value.map(({ key, sektor }) => {
-    const selectedFrequency =
-      sectorFrequencies.value[key] || frequency.value
+    const selectedFrequency = frequency.value
     const sourceData =
       selectedFrequency === 'quarterly'
         ? props.quarterlyData
@@ -122,13 +118,6 @@ function setChartRef(key, element) {
     chartRefs.set(key, element)
   } else {
     chartRefs.delete(key)
-  }
-}
-
-function setSectorFrequency(key, value) {
-  sectorFrequencies.value = {
-    ...sectorFrequencies.value,
-    [key]: value
   }
 }
 
@@ -414,41 +403,10 @@ onBeforeUnmount(() => {
         :key="panel.key"
         class="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 border-t-2 border-t-teal-500 bg-white shadow-[0_6px_20px_rgba(15,23,42,0.045)] transition-shadow duration-200 hover:shadow-md"
       >
-        <header class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
+        <header class="flex items-center gap-3 border-b border-slate-100 px-4 py-2.5">
           <h3 class="min-w-0 truncate border-l-2 border-l-teal-500 pl-2 text-sm font-bold text-slate-800">
             {{ panel.sektor }}
           </h3>
-
-          <div
-            class="inline-flex shrink-0 rounded-md bg-slate-100 p-0.5"
-            role="group"
-            :aria-label="`Frekuensi grafik ${panel.sektor}`"
-          >
-            <button
-              type="button"
-              class="rounded px-2 py-1 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              :class="panel.frequency === 'annual'
-                ? 'bg-white text-teal-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'"
-              :aria-pressed="panel.frequency === 'annual'"
-              :disabled="loading"
-              @click="setSectorFrequency(panel.key, 'annual')"
-            >
-              Tahunan
-            </button>
-            <button
-              type="button"
-              class="rounded px-2 py-1 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              :class="panel.frequency === 'quarterly'
-                ? 'bg-white text-cyan-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'"
-              :aria-pressed="panel.frequency === 'quarterly'"
-              :disabled="loading"
-              @click="setSectorFrequency(panel.key, 'quarterly')"
-            >
-              Triwulanan
-            </button>
-          </div>
         </header>
 
         <div class="h-[320px] min-w-0 w-full px-2 py-2 sm:h-[340px]">

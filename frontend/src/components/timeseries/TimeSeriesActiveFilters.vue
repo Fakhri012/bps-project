@@ -451,7 +451,7 @@ const description =
     ========================= */
 
     return (
-      `Menampilkan data neraca sektoral untuk ${periode}, dengan ${jenisText}, pada ${neracaText}, dengan ${klasifikasiText}, dan mencakup ${institusiText}.`
+      `Menampilkan data neraca institusi terintegrasi untuk ${periode}, dengan ${jenisText}, pada ${neracaText}, dengan ${klasifikasiText}, dan mencakup ${institusiText}.`
     )
   })
 
@@ -494,7 +494,7 @@ function resetFilters() {
             text-slate-900
           "
         >
-          Time Series Neraca Sektoral
+          Time Series Neraca Institusi Terintegrasi
         </h2>
 
         <p

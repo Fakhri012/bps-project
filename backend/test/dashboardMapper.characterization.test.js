@@ -427,6 +427,48 @@ test('Total EKN uses the selected year, side, balance, and classification while 
   )
 })
 
+test('keeps reported historical years available through annual and quarterly sector filters', () => {
+  const years = [2016, 2017, 2018, 2019, 2020, 2021, 2023]
+  const annual = mapper.mapTahunanData(
+    years.flatMap(year => [
+      createRow('FC', '10', String(year)),
+      createRow('TOTAL EKN', '100', String(year)),
+      createRow('ROW', '5', String(year))
+    ])
+  )
+  const quarterly = mapper.mapTriwulananData(
+    years.flatMap(year => [
+      createRow('FC', '10', `${year}/Q1`),
+      createRow('TOTAL EKN', '100', `${year}/Q1`),
+      createRow('ROW', '5', `${year}/Q1`)
+    ])
+  )
+
+  assert.deepEqual(
+    mapper.generateTahunanFilters(annual).tahun,
+    years
+  )
+  assert.deepEqual(
+    mapper.generateTriwulananFilters(quarterly).tahun,
+    years
+  )
+
+  for (const year of years) {
+    const annualRows = mapper.filterTahunanData(annual, {
+      tahun: String(year),
+      institusi: 'FC'
+    })
+    const quarterlyRows = mapper.filterTriwulananData(quarterly, {
+      tahun: String(year),
+      triwulan: '1',
+      institusi: 'FC'
+    })
+
+    assert.deepEqual(annualRows.map(item => [item.tahun, item.sektor]), [[year, 'FC']])
+    assert.deepEqual(quarterlyRows.map(item => [item.tahun, item.triwulan, item.sektor]), [[year, 1, 'FC']])
+  }
+})
+
 test('returns distinct metadata only for rows matching dashboard filters', () => {
   const annualRows = mapper.mapTahunanData([
     {

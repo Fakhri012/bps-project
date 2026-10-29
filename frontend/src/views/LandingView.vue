@@ -17,8 +17,6 @@ import {
 } from 'lucide-vue-next'
 
 import logoBps from '../assets/logo.png'
-import CacheRefreshButton
-  from '../components/CacheRefreshButton.vue'
 
 import {
   CACHE_REFRESH_EVENT,
@@ -329,12 +327,11 @@ onBeforeUnmount(() => {
           </div>
           <div>
             <p class="text-xs font-extrabold tracking-wide text-white sm:text-sm">BADAN PUSAT STATISTIK</p>
-            <p class="mt-0.5 text-[10px] text-blue-200 sm:text-xs">Sistem Neraca Sektoral Indonesia</p>
+            <p class="mt-0.5 text-[10px] text-blue-200 sm:text-xs">Sistem Neraca Institusi Terintegrasi</p>
           </div>
         </div>
 
         <nav class="flex flex-wrap items-center justify-center gap-2" aria-label="Navigasi utama">
-          <CacheRefreshButton variant="dark" />
           <button type="button" :disabled="dashboardOpening" class="inline-flex items-center gap-2 rounded-lg bg-[#0f9388] px-4 py-2.5 text-[11px] font-bold text-white shadow-lg shadow-black/15 transition hover:bg-[#0d8078] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a4d3ff] disabled:cursor-wait sm:text-xs" @click="openDashboard">
             <LayoutDashboard :size="14" />
             {{ dashboardOpening ? 'Membuka…' : 'Buka Dashboard' }}
@@ -349,7 +346,7 @@ onBeforeUnmount(() => {
           Statistik nasional · Pembaruan terkini
         </p>
         <h1 id="landing-title" class="max-w-4xl text-[27px] font-extrabold leading-tight text-white sm:text-[38px]">
-          Neraca Sektoral Indonesia
+          Neraca Institusi Terintegrasi
           <span class="block text-[#9fd2ff]">dan Neraca Triwulanan</span>
         </h1>
         <p class="mt-2 max-w-xl text-xs leading-5 text-blue-100 sm:text-sm">
@@ -387,9 +384,8 @@ onBeforeUnmount(() => {
             Indikator nasional belum tersedia untuk periode terbaru.
           </div>
           <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
-            <article v-for="(card, index) in macroCards" :key="card.key" class="group flex min-h-[104px] flex-col justify-between rounded-xl border border-white/50 bg-[#eaf4ff] p-3 text-left text-[#101a35] shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-1 hover:bg-white sm:min-h-[118px] sm:p-4">
+            <article v-for="card in macroCards" :key="card.key" class="group flex min-h-[104px] flex-col justify-between rounded-xl border border-white/50 bg-[#eaf4ff] p-3 text-left text-[#101a35] shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition duration-200 hover:-translate-y-1 hover:bg-white sm:min-h-[118px] sm:p-4">
               <div class="flex items-start justify-between gap-2">
-                <span class="text-[9px] font-bold uppercase tracking-[0.1em] text-[#526985]">Indikator 0{{ index + 1 }}</span>
                 <span class="h-2 w-2 rounded-full bg-[#168ac4] ring-4 ring-[#168ac4]/10"></span>
               </div>
               <div>
@@ -497,10 +493,10 @@ onBeforeUnmount(() => {
       </section>
 
       <footer class="mt-auto flex flex-col gap-3 px-5 py-4 text-center sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:text-left">
-        <p class="text-[10px] text-blue-200">Data neraca sektoral · {{ latestPeriodLabel || 'Periode terbaru' }}</p>
+        <p class="text-[10px] text-blue-200">Data neraca institusi terintegrasi · {{ latestPeriodLabel || 'Periode terbaru' }}</p>
         <div class="flex items-center justify-center gap-2 text-[11px] font-bold text-[#b9dcff] sm:justify-end sm:text-xs">
           <img :src="logoBps" alt="" class="h-8 w-8 object-contain" />
-          <span>SALAM, TIM SAB · BADAN PUSAT STATISTIK</span>
+          <span>DIREKTORAT NERACA PENGELUARAN · BADAN PUSAT STATISTIK</span>
         </div>
       </footer>
     </main>

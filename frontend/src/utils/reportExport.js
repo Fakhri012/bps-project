@@ -1,4 +1,7 @@
 import jsPDF from 'jspdf'
+import { getInstanceByDom } from 'echarts/core'
+
+const PDF_CHART_PIXEL_RATIO = 3
 
 function toSlug(value) {
   return String(value ?? '')
@@ -93,6 +96,14 @@ function escapeCsvValue(value) {
     : text
 }
 
+export function serializeCsv(headers, rows) {
+  const content = [headers, ...rows]
+    .map(row => row.map(escapeCsvValue).join(';'))
+    .join('\r\n')
+
+  return `\uFEFF${content}`
+}
+
 function captureChartCanvas(element) {
   const sourceCanvases = Array.from(
     element.querySelectorAll('canvas')
@@ -119,13 +130,39 @@ function captureChartCanvas(element) {
   return canvas
 }
 
-export function downloadCsvFile(filename, headers, rows) {
-  const content = [headers, ...rows]
-    .map(row => row.map(escapeCsvValue).join(';'))
-    .join('\r\n')
+function captureChartImage(element) {
+  const chartElements = [
+    element,
+    ...element.querySelectorAll('[_echarts_instance_]')
+  ]
+  const chart = chartElements
+    .map(getInstanceByDom)
+    .find(instance => instance && !instance.isDisposed())
 
+  if (chart) {
+    return {
+      dataUrl: chart.getDataURL({
+        type: 'png',
+        pixelRatio: PDF_CHART_PIXEL_RATIO,
+        backgroundColor: '#ffffff'
+      }),
+      width: chart.getWidth(),
+      height: chart.getHeight()
+    }
+  }
+
+  const canvas = captureChartCanvas(element)
+
+  return {
+    dataUrl: canvas.toDataURL('image/png'),
+    width: canvas.width,
+    height: canvas.height
+  }
+}
+
+export function downloadCsvFile(filename, headers, rows) {
   const blob = new Blob(
-    ['\uFEFF', content],
+    [serializeCsv(headers, rows)],
     { type: 'text/csv;charset=utf-8;' }
   )
   const url = URL.createObjectURL(blob)
@@ -180,9 +217,9 @@ export async function exportChartsPdf({
       pdf.addPage('a4', 'landscape')
     }
 
-    const canvas = captureChartCanvas(element)
+    const image = captureChartImage(element)
 
-    if (canvas.width === 0 || canvas.height === 0) {
+    if (image.width === 0 || image.height === 0) {
       throw new Error('Grafik kosong saat disiapkan untuk PDF.')
     }
 
@@ -216,15 +253,15 @@ export async function exportChartsPdf({
     const footerTop = pageHeight - margin
     const availableHeight = footerTop - imageTop
     const scale = Math.min(
-      contentWidth / canvas.width,
-      availableHeight / canvas.height
+      contentWidth / image.width,
+      availableHeight / image.height
     )
-    const imageWidth = canvas.width * scale
-    const imageHeight = canvas.height * scale
+    const imageWidth = image.width * scale
+    const imageHeight = image.height * scale
     const imageLeft = (pageWidth - imageWidth) / 2
 
     pdf.addImage(
-      canvas.toDataURL('image/png'),
+      image.dataUrl,
       'PNG',
       imageLeft,
       imageTop,

@@ -2,7 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildRatioCsvExportData,
   buildRatioChartRows,
+  canExportRatioCsv,
   filterRatioData,
   getRatioTypesForSectors,
   normalizeRatioSektor,
@@ -93,4 +95,37 @@ test('keeps existing ratios available for their own sector and returns empty cha
     rows: [],
     sectors: []
   })
+})
+
+test('allows ratio CSV only when a sector is selected and table rows exist', () => {
+  assert.equal(canExportRatioCsv({ sectors: [], rowCount: 3 }), false)
+  assert.equal(canExportRatioCsv({ sectors: ['FC'], rowCount: 0 }), false)
+  assert.equal(canExportRatioCsv({ loading: true, sectors: ['FC'], rowCount: 3 }), false)
+  assert.equal(canExportRatioCsv({ sectors: ['FC'], rowCount: 3 }), true)
+})
+
+test('builds ratio CSV rows from the sorted table projection without rounding', () => {
+  const tableRows = [
+    {
+      periode: '2019',
+      sektor: 'FC',
+      values: { 'COE/VA': 0.123456, 'PMTB/DI': null }
+    },
+    {
+      periode: '2020/Q1',
+      sektor: 'ROW',
+      values: { 'COE/VA': '0,02340', 'PMTB/DI': 0.0000123 }
+    }
+  ]
+
+  assert.deepEqual(
+    buildRatioCsvExportData(tableRows, ['COE/VA', 'PMTB/DI']),
+    {
+      headers: ['Periode', 'Sektor', 'COE/VA', 'PMTB/DI'],
+      rows: [
+        ['2019', 'FC', 0.123456, ''],
+        ['2020/Q1', 'ROW', '0,02340', 0.0000123]
+      ]
+    }
+  )
 })

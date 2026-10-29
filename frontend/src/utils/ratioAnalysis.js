@@ -56,6 +56,25 @@ export function filterRatioData(
   )
 }
 
+export function canExportRatioCsv({
+  loading = false,
+  sectors = [],
+  rowCount = 0
+} = {}) {
+  return !loading && sectors.length > 0 && rowCount > 0
+}
+
+export function buildRatioCsvExportData(tableRows, ratios) {
+  return {
+    headers: ['Periode', 'Sektor', ...ratios],
+    rows: tableRows.map(row => [
+      row.periode,
+      row.sektor,
+      ...ratios.map(ratio => row.values[ratio] ?? '')
+    ])
+  }
+}
+
 export function numericRatioValue(value) {
   if (
     value === null ||
