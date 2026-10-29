@@ -59,6 +59,11 @@ import {
 } from '../utils/dashboardText.js'
 
 import {
+  getRatioTypesForSectors,
+  normalizeRatioSektor
+} from '../utils/ratioAnalysis.js'
+
+import {
   buildExportFilename,
   downloadCsvFile,
   exportChartsPdf
@@ -167,7 +172,16 @@ const ratioDescriptions = {
     'Pembentukan Modal Tetap Bruto / Pendapatan Disposabel Bruto',
 
   'IA/Output':
-    'Konsumsi Antara / Output'
+    'Konsumsi Antara / Output',
+
+  'KMT/PMTB':
+    'Rasio pinjaman neto terhadap pembentukan modal tetap bruto',
+
+  'NET/NTB':
+    'Neraca neto sektoral terhadap nilai tambah bruto',
+
+  'CAB/GDP':
+    'Keseimbangan Eksternal Berjalan / Nilai Tambah Bruto'
 }
 
 
@@ -239,37 +253,6 @@ function isQuarterly(periode) {
 function isAnnual(periode) {
 
   return !isQuarterly(periode)
-
-}
-
-
-function normalizeRatioSektor(value) {
-
-  const sektor = String(value ?? '').trim().toUpperCase()
-
-
-  if (/^NFC(?:\s+\d+)?$/.test(sektor)) {
-
-    return 'NFC'
-
-  }
-
-
-  if (/^NFC PRIVATE(?:\s+\d+)?$/.test(sektor)) {
-
-    return 'NFC PRIVATE'
-
-  }
-
-
-  if (/^NFC PUBLIC(?:\s+\d+)?$/.test(sektor)) {
-
-    return 'NFC PUBLIC'
-
-  }
-
-
-  return sektor.replace(/\s+\d+$/, '').trim()
 
 }
 
@@ -573,16 +556,22 @@ const jenisRasioOptions = computed(() => {
 
   return [
     ...new Set(
-      data.value
-        .map(
-          item =>
-            item['JENIS RASIO']
-        )
-        .filter(ratio => Boolean(ratio) && !isExcludedRatioType(ratio))
+      getRatioTypesForSectors(data.value, selectedSektor.value)
+        .filter(ratio => !isExcludedRatioType(ratio))
     )
   ]
 
 })
+
+
+watch(
+  [selectedSektor, data],
+  () => {
+    selectedJenisRasio.value = selectedJenisRasio.value
+      .filter(ratio => jenisRasioOptions.value.includes(ratio))
+  },
+  { deep: true }
+)
 
 
 const displayedRatioTypes = computed(() =>
@@ -1860,26 +1849,42 @@ const charts = computed(() => {
     : jenisRasioOptions.value
 
 
-  return activeRatios.map(ratio => {
-    const periodLabel = ratioChartModes.value[ratio] || 'Tahunan'
-    const quarterly = periodLabel === 'Triwulanan'
-    const chartData = buildChartRows(
-      quarterly ? quarterlyData.value : annualData.value,
-      ratio
-    )
-    const hasData = chartData.rows.some(row =>
-      chartData.sectors.some(sector => row[sector] !== null)
-    )
+  return activeRatios
+    .map(ratio => {
+      const annualChartData = buildChartRows(annualData.value, ratio)
+      const quarterlyChartData = buildChartRows(quarterlyData.value, ratio)
+      const hasData = chartData => chartData.rows.some(row =>
+        chartData.sectors.some(sector => row[sector] !== null)
+      )
+      const availableModes = [
+        ...(hasData(annualChartData) ? ['Tahunan'] : []),
+        ...(hasData(quarterlyChartData) ? ['Triwulanan'] : [])
+      ]
 
-    return {
-      key: ratio,
-      ratio,
-      periodLabel,
-      chartData,
-      hasData,
-      option: createChartOption(chartData, quarterly)
-    }
-  })
+      if (availableModes.length === 0) {
+        return null
+      }
+
+      const selectedMode = ratioChartModes.value[ratio] || 'Tahunan'
+      const periodLabel = availableModes.includes(selectedMode)
+        ? selectedMode
+        : availableModes[0]
+      const quarterly = periodLabel === 'Triwulanan'
+      const chartData = quarterly
+        ? quarterlyChartData
+        : annualChartData
+
+      return {
+        key: ratio,
+        ratio,
+        periodLabel,
+        availableModes,
+        chartData,
+        hasData: true,
+        option: createChartOption(chartData, quarterly)
+      }
+    })
+    .filter(Boolean)
 
 })
 
@@ -2991,6 +2996,7 @@ onBeforeUnmount(() => {
               "
             >
               <button
+                v-if="chart.availableModes.includes('Tahunan')"
                 type="button"
                 class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
                 :class="chart.periodLabel === 'Tahunan'
@@ -3002,6 +3008,7 @@ onBeforeUnmount(() => {
                 Tahunan
               </button>
               <button
+                v-if="chart.availableModes.includes('Triwulanan')"
                 type="button"
                 class="rounded-md px-3 py-1.5 text-[10px] font-semibold transition-all duration-200"
                 :class="chart.periodLabel === 'Triwulanan'
@@ -3138,7 +3145,8 @@ onBeforeUnmount(() => {
               { code: 'PMTB / DI', description: 'Pembentukan modal tetap bruto terhadap pendapatan disposabel', accent: 'border-emerald-500' },
               { code: 'IA / OUTPUT', description: 'Alokasi investasi terhadap total output sektoral', accent: 'border-amber-500' },
               { code: 'KMT / PMTB', description: 'Rasio pinjaman neto terhadap pembentukan modal tetap bruto', accent: 'border-orange-500' },
-              { code: 'NET / NTB', description: 'Neraca neto sektoral terhadap nilai tambah bruto', accent: 'border-violet-500' }
+              { code: 'NET / NTB', description: 'Neraca neto sektoral terhadap nilai tambah bruto', accent: 'border-violet-500' },
+              { code: 'CAB / GDP', description: 'Keseimbangan Eksternal Berjalan / Nilai Tambah Bruto', accent: 'border-rose-500' }
             ]"
             :key="indicator.code"
             class="

@@ -2,7 +2,7 @@ export function normalizeRatioSektor(value) {
   const sektor = String(value ?? '').trim().toUpperCase()
 
   if (/^ROW\s*2$/.test(sektor)) {
-    return 'ROW2'
+    return 'ROW'
   }
 
   if (/^NFC(?:\s+\d+)?$/.test(sektor)) {

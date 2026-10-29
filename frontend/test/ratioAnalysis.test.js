@@ -42,13 +42,14 @@ const rows = [
   }
 ]
 
-test('keeps ROW and ROW2 separate while normalizing the sheet label ROW 2', () => {
+test('normalizes ROW, ROW2, and ROW 2 to the same sector', () => {
   assert.equal(normalizeRatioSektor('ROW'), 'ROW')
-  assert.equal(normalizeRatioSektor('ROW2'), 'ROW2')
-  assert.equal(normalizeRatioSektor('ROW 2'), 'ROW2')
+  assert.equal(normalizeRatioSektor('ROW2'), 'ROW')
+  assert.equal(normalizeRatioSektor('ROW 2'), 'ROW')
 })
 
-test('makes CAB/GDP available only when selected sectors contain ROW2', () => {
+test('makes ROW 2 ratios available through the ROW sector filter', () => {
+  assert.deepEqual(getRatioTypesForSectors(rows, ['ROW']), ['CAB/GDP'])
   assert.deepEqual(getRatioTypesForSectors(rows, ['ROW2']), ['CAB/GDP'])
   assert.deepEqual(getRatioTypesForSectors(rows, ['ROW 2']), ['CAB/GDP'])
   assert.deepEqual(getRatioTypesForSectors(rows, ['FC']), ['COE/VA'])
@@ -57,7 +58,7 @@ test('makes CAB/GDP available only when selected sectors contain ROW2', () => {
 test('filters CAB/GDP to its sector and exact annual or quarterly periods', () => {
   assert.deepEqual(
     filterRatioData(rows, {
-      sectors: ['ROW2'],
+      sectors: ['ROW'],
       periods: ['2016/Q2'],
       ratios: ['CAB/GDP']
     }),
@@ -77,10 +78,10 @@ test('filters CAB/GDP to its sector and exact annual or quarterly periods', () =
 test('builds a separate CAB/GDP quarterly series without summing duplicate periods', () => {
   const chart = buildRatioChartRows(rows, 'CAB/GDP')
 
-  assert.deepEqual(chart.sectors, ['ROW2'])
+  assert.deepEqual(chart.sectors, ['ROW'])
   assert.deepEqual(chart.rows, [
-    { periode: '2016/Q1', ROW2: 0.021, _ROW2Canonical: false },
-    { periode: '2016/Q2', ROW2: 0.0239, _ROW2Canonical: false }
+    { periode: '2016/Q1', ROW: 0.021, _ROWCanonical: false },
+    { periode: '2016/Q2', ROW: 0.0239, _ROWCanonical: false }
   ])
   assert.equal(numericRatioValue('0,0210'), 0.021)
 })
