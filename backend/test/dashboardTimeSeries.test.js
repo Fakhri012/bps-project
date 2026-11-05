@@ -6,6 +6,8 @@ const {
   buildTriwulananTimeSeries,
   buildTahunanKlasifikasiTimeSeries,
   buildTriwulananKlasifikasiTimeSeries,
+  buildTahunanTimeSeriesResult,
+  buildTriwulananTimeSeriesResult,
   getLatestAnnualYear,
   getPreviousAnnualYear,
   getLandingNationalIndicators
@@ -325,6 +327,161 @@ test('quarterly classification data retains chronological periods separately', (
       ['Klasifikasi Y', '2021 Q1', 8]
     ]
   )
+})
+
+test('annual endpoint output matches standalone builders for the same filters', () => {
+  const rows = [
+    {
+      tahun: 2020,
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'A',
+      nilai: 10
+    },
+    {
+      tahun: 2020,
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'B',
+      nilai: 5
+    },
+    {
+      tahun: 2020,
+      sektor: 'NFC',
+      institusi: 'Korporasi Nonfinansial',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'A',
+      nilai: 7
+    },
+    {
+      tahun: 2021,
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      sisi: 'KEWAJIBAN',
+      jenisNeraca: 'Neraca B',
+      rincian: 'A',
+      nilai: 11
+    },
+    {
+      tahun: 2021,
+      sektor: 'HH',
+      institusi: 'Rumah Tangga',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'A',
+      nilai: null
+    }
+  ]
+  const filterCases = [
+    {},
+    { institusi: 'FC' },
+    { tahun: ['2020'], institusi: ['FC', 'NFC'] },
+    {
+      tahun: ['2020', '2021'],
+      sisi: 'ASET',
+      neraca: 'Neraca A',
+      klasifikasi: ['A', 'B'],
+      institusi: ['FC', 'NFC']
+    }
+  ]
+
+  filterCases.forEach(filters => {
+    const result = buildTahunanTimeSeriesResult(rows, filters)
+
+    assert.deepEqual(result.data, buildTahunanTimeSeries(rows, filters))
+    assert.deepEqual(
+      result.statistikKlasifikasi,
+      buildTahunanKlasifikasiTimeSeries(rows, filters)
+    )
+  })
+})
+
+test('quarterly endpoint output matches standalone builders for the same filters', () => {
+  const rows = [
+    {
+      tahun: 2020,
+      triwulan: 4,
+      periode: '2020 Q4',
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'A',
+      nilai: 3
+    },
+    {
+      tahun: 2020,
+      triwulan: 4,
+      periode: '2020 Q4',
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'B',
+      nilai: 6
+    },
+    {
+      tahun: 2020,
+      triwulan: 4,
+      periode: '2020 Q4',
+      sektor: 'NFC',
+      institusi: 'Korporasi Nonfinansial',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'A',
+      nilai: 9
+    },
+    {
+      tahun: 2021,
+      triwulan: 1,
+      periode: '2021 Q1',
+      sektor: 'FC',
+      institusi: 'Korporasi Finansial',
+      sisi: 'KEWAJIBAN',
+      jenisNeraca: 'Neraca B',
+      rincian: 'A',
+      nilai: 8
+    },
+    {
+      tahun: 2021,
+      triwulan: 2,
+      periode: '2021 Q2',
+      sektor: 'HH',
+      institusi: 'Rumah Tangga',
+      sisi: 'ASET',
+      jenisNeraca: 'Neraca A',
+      rincian: 'A',
+      nilai: null
+    }
+  ]
+  const filterCases = [
+    {},
+    { institusi: 'FC' },
+    { tahun: ['2020'], triwulan: ['Q4'], institusi: ['FC', 'NFC'] },
+    {
+      tahun: ['2020', '2021'],
+      triwulan: ['1', 'Q4'],
+      sisi: 'ASET',
+      neraca: 'Neraca A',
+      klasifikasi: ['A', 'B'],
+      institusi: ['FC', 'NFC']
+    }
+  ]
+
+  filterCases.forEach(filters => {
+    const result = buildTriwulananTimeSeriesResult(rows, filters)
+
+    assert.deepEqual(result.data, buildTriwulananTimeSeries(rows, filters))
+    assert.deepEqual(
+      result.statistikKlasifikasi,
+      buildTriwulananKlasifikasiTimeSeries(rows, filters)
+    )
+  })
 })
 
 test('landing overview selects source rows for five KPIs without aggregating net lending rows', () => {

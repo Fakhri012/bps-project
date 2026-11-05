@@ -11,6 +11,7 @@ async function withMockedCache(readers, callback) {
   const previousService = require.cache[servicePath]
   const previousSheets = require.cache[sheetsPath]
   const previousMapper = require.cache[mapperPath]
+  const calls = { dashboardReads: 0 }
 
   const sheetsModule = new Module(sheetsPath)
   sheetsModule.filename = sheetsPath
@@ -19,6 +20,11 @@ async function withMockedCache(readers, callback) {
     getTahunanData: readers.getTahunanData,
     getTriwulananData: readers.getTriwulananData,
     getDashboardData: async () => {
+      calls.dashboardReads += 1
+      if (readers.getDashboardData) {
+        return readers.getDashboardData()
+      }
+
       const [tahunan, triwulanan] = await Promise.all([
         readers.getTahunanData(),
         readers.getTriwulananData()
@@ -41,7 +47,7 @@ async function withMockedCache(readers, callback) {
   delete require.cache[servicePath]
 
   try {
-    await callback(require(servicePath))
+    await callback(require(servicePath), calls)
   } finally {
     Date.now = previousDateNow
 
@@ -64,6 +70,41 @@ async function withMockedCache(readers, callback) {
     }
   }
 }
+
+test('concurrent cold annual and quarterly reads share one dashboard batch', async () => {
+  let releaseRead
+  let batchReads = 0
+  const readGate = new Promise(resolve => {
+    releaseRead = resolve
+  })
+
+  await withMockedCache({
+    getDashboardData: async () => {
+      batchReads += 1
+      await readGate
+      return {
+        tahunan: [{ year: 2025 }],
+        triwulanan: [{ year: 2025, quarter: 1 }]
+      }
+    }
+  }, async (service, calls) => {
+    const annualRead = service.getCachedTahunanData()
+    const quarterlyRead = service.getCachedTriwulananData()
+
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(batchReads, 1)
+    assert.equal(calls.dashboardReads, 1)
+
+    releaseRead()
+    const [annualData, quarterlyData] = await Promise.all([
+      annualRead,
+      quarterlyRead
+    ])
+
+    assert.deepEqual(annualData, [{ year: 2025 }])
+    assert.deepEqual(quarterlyData, [{ year: 2025, quarter: 1 }])
+  })
+})
 
 test('manual refresh replaces valid cache and advances its timestamp within the TTL', async () => {
   let now = 1_800_000_000_000

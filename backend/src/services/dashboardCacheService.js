@@ -1,6 +1,4 @@
 const {
-  getTahunanData,
-  getTriwulananData,
   getDashboardData
 } = require('./googleSheetsService')
 
@@ -36,21 +34,12 @@ let tahunanCache = {
   loadedAt: null
 }
 
-let tahunanLoadingPromise = null
-
-
-/*
-|--------------------------------------------------------------------------
-| CACHE TRIWULANAN
-|--------------------------------------------------------------------------
-*/
-
 let triwulananCache = {
   data: null,
   loadedAt: null
 }
 
-let triwulananLoadingPromise = null
+let dashboardLoadingPromise = null
 let manualRefreshPromise = null
 let lastManualRefreshAt = null
 
@@ -77,11 +66,33 @@ function isCacheValid(cache) {
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| GET CACHE TAHUNAN
-|--------------------------------------------------------------------------
-*/
+async function loadDashboardCaches() {
+  if (dashboardLoadingPromise) {
+    return dashboardLoadingPromise
+  }
+
+  dashboardLoadingPromise = (async () => {
+    const rawData = await getDashboardData()
+    const tahunanData = mapTahunanData(rawData.tahunan)
+    const triwulananData = mapTriwulananData(rawData.triwulanan)
+    const loadedAt = Date.now()
+
+    tahunanCache = { data: tahunanData, loadedAt }
+    triwulananCache = { data: triwulananData, loadedAt }
+
+    console.log(
+      `Cache dashboard diperbarui: ${tahunanData.length} tahunan, ${triwulananData.length} triwulanan`
+    )
+
+    return { tahunan: tahunanData, triwulanan: triwulananData }
+  })()
+
+  try {
+    return await dashboardLoadingPromise
+  } finally {
+    dashboardLoadingPromise = null
+  }
+}
 
 async function getCachedTahunanData() {
   if (manualRefreshPromise) {
@@ -97,84 +108,13 @@ async function getCachedTahunanData() {
     )
   }
 
-  if (
-    isCacheValid(
-      tahunanCache
-    )
-  ) {
+  if (isCacheValid(tahunanCache)) {
     return tahunanCache.data
   }
 
-
-  /*
-   * Kalau sedang ada proses loading,
-   * request berikutnya cukup menunggu
-   * proses tersebut.
-   */
-
-  if (
-    tahunanLoadingPromise
-  ) {
-    return tahunanLoadingPromise
-  }
-
-
-  /*
-   * Tandai proses loading sedang berjalan.
-   */
-
-  tahunanLoadingPromise =
-    (async () => {
-      try {
-        console.log(
-          'Mengambil data Tahunan dari Google Sheets...'
-        )
-
-        const rawData =
-          await getTahunanData()
-
-
-        const data =
-          mapTahunanData(
-            rawData
-          )
-
-
-        tahunanCache = {
-          data,
-          loadedAt:
-            Date.now()
-        }
-
-
-        console.log(
-          `Cache Tahunan diperbarui: ${data.length} baris`
-        )
-
-
-        return data
-
-      } finally {
-        /*
-         * Setelah selesai,
-         * izinkan proses loading berikutnya.
-         */
-
-        tahunanLoadingPromise =
-          null
-      }
-    })()
-
-
-  return tahunanLoadingPromise
+  const data = await loadDashboardCaches()
+  return data.tahunan
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| GET CACHE TRIWULANAN
-|--------------------------------------------------------------------------
-*/
 
 async function getCachedTriwulananData() {
   if (manualRefreshPromise) {
@@ -190,48 +130,12 @@ async function getCachedTriwulananData() {
     )
   }
 
-  if (
-    isCacheValid(
-      triwulananCache
-    )
-  ) {
+  if (isCacheValid(triwulananCache)) {
     return triwulananCache.data
   }
 
-  if (triwulananLoadingPromise) {
-    return triwulananLoadingPromise
-  }
-
-  triwulananLoadingPromise = (async () => {
-    try {
-      console.log(
-        'Mengambil data Triwulanan dari Google Sheets...'
-      )
-
-      const rawData =
-        await getTriwulananData()
-
-      const data =
-        mapTriwulananData(
-          rawData
-        )
-
-      triwulananCache = {
-        data,
-        loadedAt: Date.now()
-      }
-
-      console.log(
-        `Cache Triwulanan diperbarui: ${data.length} baris`
-      )
-
-      return data
-    } finally {
-      triwulananLoadingPromise = null
-    }
-  })()
-
-  return triwulananLoadingPromise
+  const data = await loadDashboardCaches()
+  return data.triwulanan
 }
 
 async function warmDashboardCache() {
@@ -267,8 +171,7 @@ async function refreshDashboardCache() {
   manualRefreshPromise = (async () => {
     try {
       await Promise.allSettled([
-        tahunanLoadingPromise,
-        triwulananLoadingPromise
+        dashboardLoadingPromise
       ].filter(Boolean))
 
       const rawData = await getDashboardData()

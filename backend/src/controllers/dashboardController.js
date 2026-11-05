@@ -498,20 +498,15 @@ function filterAssetData(
 
 
 
-function buildTahunanTimeSeries(
-  data,
-  selectedFilters = {}
-) {
-  const filteredData =
-    filterAssetData(
-      data,
-      {
-        ...selectedFilters,
-        search: null,
-        triwulan: null
-      }
-    )
+function filterTahunanTimeSeriesData(data, selectedFilters = {}) {
+  return filterAssetData(data, {
+    ...selectedFilters,
+    search: null,
+    triwulan: null
+  })
+}
 
+function buildTahunanTimeSeriesFromFilteredData(filteredData) {
   const grouped =
     new Map()
 
@@ -572,20 +567,16 @@ function buildTahunanTimeSeries(
   )
 }
 
-function buildTahunanKlasifikasiTimeSeries(
+function buildTahunanTimeSeries(
   data,
   selectedFilters = {}
 ) {
-  const filteredData =
-    filterAssetData(
-      data,
-      {
-        ...selectedFilters,
-        search: null,
-        triwulan: null
-      }
-    )
+  return buildTahunanTimeSeriesFromFilteredData(
+    filterTahunanTimeSeriesData(data, selectedFilters)
+  )
+}
 
+function buildTahunanKlasifikasiTimeSeriesFromFilteredData(filteredData) {
   return aggregateKlasifikasiTimeSeries(
     filteredData,
     item => {
@@ -599,6 +590,25 @@ function buildTahunanKlasifikasiTimeSeries(
         : null
     }
   )
+}
+
+function buildTahunanKlasifikasiTimeSeries(
+  data,
+  selectedFilters = {}
+) {
+  return buildTahunanKlasifikasiTimeSeriesFromFilteredData(
+    filterTahunanTimeSeriesData(data, selectedFilters)
+  )
+}
+
+function buildTahunanTimeSeriesResult(data, selectedFilters = {}) {
+  const filteredData = filterTahunanTimeSeriesData(data, selectedFilters)
+
+  return {
+    data: buildTahunanTimeSeriesFromFilteredData(filteredData),
+    statistikKlasifikasi:
+      buildTahunanKlasifikasiTimeSeriesFromFilteredData(filteredData)
+  }
 }
 
 
@@ -700,19 +710,14 @@ function aggregateKlasifikasiTimeSeries(
 |
 */
 
-function buildTriwulananTimeSeries(
-  data,
-  selectedFilters = {}
-) {
-  const filteredData =
-    filterAssetData(
-      data,
-      {
-        ...selectedFilters,
-        search: null
-      }
-    )
+function filterTriwulananTimeSeriesData(data, selectedFilters = {}) {
+  return filterAssetData(data, {
+    ...selectedFilters,
+    search: null
+  })
+}
 
+function buildTriwulananTimeSeriesFromFilteredData(filteredData) {
   const grouped =
     new Map()
 
@@ -787,19 +792,16 @@ function buildTriwulananTimeSeries(
   )
 }
 
-function buildTriwulananKlasifikasiTimeSeries(
+function buildTriwulananTimeSeries(
   data,
   selectedFilters = {}
 ) {
-  const filteredData =
-    filterAssetData(
-      data,
-      {
-        ...selectedFilters,
-        search: null
-      }
-    )
+  return buildTriwulananTimeSeriesFromFilteredData(
+    filterTriwulananTimeSeriesData(data, selectedFilters)
+  )
+}
 
+function buildTriwulananKlasifikasiTimeSeriesFromFilteredData(filteredData) {
   return aggregateKlasifikasiTimeSeries(
     filteredData,
     item => {
@@ -823,6 +825,25 @@ function buildTriwulananKlasifikasiTimeSeries(
       }
     }
   )
+}
+
+function buildTriwulananKlasifikasiTimeSeries(
+  data,
+  selectedFilters = {}
+) {
+  return buildTriwulananKlasifikasiTimeSeriesFromFilteredData(
+    filterTriwulananTimeSeriesData(data, selectedFilters)
+  )
+}
+
+function buildTriwulananTimeSeriesResult(data, selectedFilters = {}) {
+  const filteredData = filterTriwulananTimeSeriesData(data, selectedFilters)
+
+  return {
+    data: buildTriwulananTimeSeriesFromFilteredData(filteredData),
+    statistikKlasifikasi:
+      buildTriwulananKlasifikasiTimeSeriesFromFilteredData(filteredData)
+  }
 }
 
 
@@ -1601,17 +1622,10 @@ async function getTahunanTimeSeries(
      * Bangun data grafik.
      */
 
-    const timeSeries =
-      buildTahunanTimeSeries(
-        data,
-        selectedFilters
-      )
-
-    const statistikKlasifikasi =
-      buildTahunanKlasifikasiTimeSeries(
-        data,
-        selectedFilters
-      )
+    const {
+      data: timeSeries,
+      statistikKlasifikasi
+    } = buildTahunanTimeSeriesResult(data, selectedFilters)
 
 
 res.json({
@@ -1696,17 +1710,10 @@ async function getTriwulananTimeSeries(
     }
 
 
-    const timeSeries =
-      buildTriwulananTimeSeries(
-        data,
-        selectedFilters
-      )
-
-    const statistikKlasifikasi =
-      buildTriwulananKlasifikasiTimeSeries(
-        data,
-        selectedFilters
-      )
+    const {
+      data: timeSeries,
+      statistikKlasifikasi
+    } = buildTriwulananTimeSeriesResult(data, selectedFilters)
 
 
 res.json({
@@ -2265,6 +2272,8 @@ buildTahunanTimeSeries,
 buildTriwulananTimeSeries,
 buildTahunanKlasifikasiTimeSeries,
 buildTriwulananKlasifikasiTimeSeries,
+buildTahunanTimeSeriesResult,
+buildTriwulananTimeSeriesResult,
 
 
   /*
