@@ -115,6 +115,14 @@ test('builds ratio CSV rows from the sorted table projection without rounding', 
       periode: '2020/Q1',
       sektor: 'ROW',
       values: { 'COE/VA': '0,02340', 'PMTB/DI': 0.0000123 }
+    },
+    {
+      periode: '2021',
+      sektor: 'FC',
+      values: {
+        'COE/VA': '0.123456789012345678',
+        'PMTB/DI': '0,000000123456789'
+      }
     }
   ]
 
@@ -124,7 +132,8 @@ test('builds ratio CSV rows from the sorted table projection without rounding', 
       headers: ['Periode', 'Sektor', 'COE/VA', 'PMTB/DI'],
       rows: [
         ['2019', 'FC', 0.123456, ''],
-        ['2020/Q1', 'ROW', '0,02340', 0.0000123]
+        ['2020/Q1', 'ROW', '0,02340', 0.0000123],
+        ['2021', 'FC', '0.123456789012345678', '0,000000123456789']
       ]
     }
   )

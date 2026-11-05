@@ -1,3 +1,16 @@
+let exportNumberFormat = false
+
+export function setExportNumberFormat(enabled) {
+  exportNumberFormat = Boolean(enabled)
+}
+
+export function getDisplayNumberFormatOptions(options = {}) {
+  return {
+    ...options,
+    useGrouping: !exportNumberFormat
+  }
+}
+
 export function formatDisplayNumber(value) {
   const number = Number(value)
 
@@ -7,6 +20,6 @@ export function formatDisplayNumber(value) {
 
   return new Intl.NumberFormat(
     'id-ID',
-    { maximumFractionDigits: 2 }
+    getDisplayNumberFormatOptions({ maximumFractionDigits: 2 })
   ).format(number)
 }

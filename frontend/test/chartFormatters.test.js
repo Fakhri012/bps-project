@@ -6,6 +6,7 @@ import {
   formatTimeSeriesAxis,
   formatTimeSeriesNumber
 } from '../src/utils/chartFormatters.js'
+import { setExportNumberFormat } from '../src/utils/displayFormatters.js'
 
 test('formats database numbers without rounding decimal digits', () => {
   const cases = [
@@ -56,5 +57,14 @@ test('formats time-series axis in the raw data scale', () => {
 
   for (const [value, expected] of cases) {
     assert.equal(formatTimeSeriesAxis(value), expected)
+  }
+})
+
+test('removes grouping from time-series chart values during PDF export', () => {
+  setExportNumberFormat(true)
+  try {
+    assert.equal(formatTimeSeriesNumber(1234567.89), '1234567,89')
+  } finally {
+    setExportNumberFormat(false)
   }
 })

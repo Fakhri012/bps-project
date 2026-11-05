@@ -37,7 +37,8 @@ const menuRoutes = {
   Dashboard: 'dashboard',
   Database: 'database',
   'Time Series': 'time-series',
-  'Analisis Rasio': 'analisis-rasio'
+  'Analisis Rasio': 'analisis-rasio',
+  'Banding Makro': 'banding-makro'
 }
 
 const sidebarCollapsed = ref(wasCompactDesktop)

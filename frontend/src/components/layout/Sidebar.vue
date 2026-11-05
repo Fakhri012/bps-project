@@ -1,5 +1,6 @@
 <script setup>
 import {
+  ArrowLeftRight,
   House,
   LayoutDashboard,
   TableProperties,
@@ -113,6 +114,14 @@ const menus = [
 
     icon:
       ChartNoAxesCombined
+  },
+
+  {
+    name:
+      'Banding Makro',
+
+    icon:
+      ArrowLeftRight
   },
 
 

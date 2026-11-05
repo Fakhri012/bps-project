@@ -1957,7 +1957,10 @@ function downloadAnalysisCsv() {
       extension: 'csv'
     }),
     headers,
-    rows
+    rows,
+    {
+      numericColumns: tableRatioTypes.value.map((_, index) => index + 2)
+    }
   )
 }
 

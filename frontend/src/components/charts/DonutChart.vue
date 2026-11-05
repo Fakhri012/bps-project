@@ -7,7 +7,8 @@ import {
 } from '../../utils/chartColors'
 
 import {
-  formatDisplayNumber as formatNumber
+  formatDisplayNumber as formatNumber,
+  getDisplayNumberFormatOptions
 } from '../../utils/displayFormatters.js'
 
 
@@ -339,7 +340,7 @@ label: {
     const formatted =
       new Intl.NumberFormat(
         'id-ID',
-        {
+        getDisplayNumberFormatOptions({
           minimumFractionDigits:
             percent < 1
               ? 2
@@ -347,7 +348,7 @@ label: {
 
           maximumFractionDigits:
             2
-        }
+        })
       ).format(percent)
 
     return `${formatted}%`

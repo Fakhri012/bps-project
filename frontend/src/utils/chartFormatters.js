@@ -1,3 +1,5 @@
+import { getDisplayNumberFormatOptions } from './displayFormatters.js'
+
 export function formatDatabaseNumber(value) {
   const number = Number(value)
 
@@ -10,7 +12,7 @@ export function formatDatabaseNumber(value) {
   if (/[eE]/.test(decimal)) {
     return new Intl.NumberFormat(
       'id-ID',
-      { maximumSignificantDigits: 21 }
+      getDisplayNumberFormatOptions({ maximumSignificantDigits: 21 })
     ).format(number)
   }
 
@@ -19,7 +21,7 @@ export function formatDatabaseNumber(value) {
     (negative ? decimal.slice(1) : decimal).split('.')
   const groupedInteger = Number(integer).toLocaleString(
     'id-ID',
-    { maximumFractionDigits: 0 }
+    getDisplayNumberFormatOptions({ maximumFractionDigits: 0 })
   )
 
   return `${negative ? '-' : ''}${groupedInteger}${fraction ? `,${fraction}` : ''}`

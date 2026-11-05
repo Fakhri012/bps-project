@@ -7,7 +7,8 @@ import {
 } from '../../utils/chartColors'
 
 import {
-  formatDisplayNumber as formatNumber
+  formatDisplayNumber as formatNumber,
+  getDisplayNumberFormatOptions
 } from '../../utils/displayFormatters.js'
 
 
@@ -163,10 +164,10 @@ const option = computed(() => ({
 formatter: value => {
   return new Intl.NumberFormat(
     'id-ID',
-    {
+    getDisplayNumberFormatOptions({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }
+    })
   ).format(
     Number(value) || 0
   )

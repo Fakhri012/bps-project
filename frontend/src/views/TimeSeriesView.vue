@@ -941,7 +941,8 @@ function downloadTimeSeriesCsv() {
     downloadCsvFile(
       getExportFilename('csv'),
       rows[0],
-      rows.slice(1)
+      rows.slice(1),
+      { numericColumns: [5] }
     )
 
 

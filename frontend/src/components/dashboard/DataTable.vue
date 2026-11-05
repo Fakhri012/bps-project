@@ -15,6 +15,10 @@ import {
 import {
   formatDisplayNumber
 } from '../../utils/displayFormatters.js'
+import {
+  downloadCsvFile,
+  downloadExcelFile
+} from '../../utils/reportExport.js'
 
 /* =========================================================
    PROPS
@@ -246,19 +250,11 @@ function getStatusClass(status) {
    EXPORT CSV
 ========================================================= */
 
-function escapeCSV(value) {
-  const text = String(
-    value ?? ''
-  ).replace(/"/g, '""')
-
-  return `"${text}"`
-}
-
-function exportCSV() {
+function getExportData() {
   if (
     filteredData.value.length === 0
   ) {
-    return
+    return null
   }
 
   const headers = [
@@ -294,54 +290,41 @@ function exportCSV() {
       ]
     )
 
-  const csvContent = [
-    headers,
-    ...rows
-  ]
-    .map((row) =>
-      row
-        .map(escapeCSV)
-        .join(';')
-    )
-    .join('\n')
+  return { headers, rows }
+}
 
-  /*
-    BOM supaya karakter Indonesia
-    terbaca dengan baik ketika dibuka
-    menggunakan Excel.
-  */
+function exportCSV() {
+  const data = getExportData()
 
-  const blob = new Blob(
-    [
-      '\uFEFF',
-      csvContent
-    ],
-    {
-      type:
-        'text/csv;charset=utf-8;'
-    }
-  )
+  if (!data) {
+    return
+  }
 
-  const url =
-    URL.createObjectURL(blob)
-
-  const link =
-    document.createElement('a')
-
-  link.href = url
-
-  link.download =
+  downloadCsvFile(
     `data-dashboard-${new Date()
       .toISOString()
-      .slice(0, 10)}.csv`
+      .slice(0, 10)}.csv`,
+    data.headers,
+    data.rows,
+    { numericColumns: [7, 8, 9] }
+  )
+}
 
-  document.body.appendChild(link)
+function exportExcel() {
+  const data = getExportData()
 
-  link.click()
+  if (!data) {
+    return
+  }
 
-  document.body.removeChild(link)
-
-  URL.revokeObjectURL(url)
+  downloadExcelFile(
+    `data-dashboard-${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`,
+    data.headers,
+    data.rows,
+    { numericColumns: [7, 8, 9] }
+  )
 }
 </script>
 
@@ -418,12 +401,13 @@ function exportCSV() {
 
         <!-- EXPORT -->
 
-        <button
-          @click="exportCSV"
-          :disabled="
-            filteredData.length === 0
-          "
-          class="flex h-10
+        <div class="flex gap-2">
+          <button
+            @click="exportCSV"
+            :disabled="
+              filteredData.length === 0
+            "
+            class="flex h-10
                  items-center
                  justify-center gap-2
                  rounded-xl border
@@ -435,11 +419,34 @@ function exportCSV() {
                  hover:bg-slate-50
                  disabled:cursor-not-allowed
                  disabled:opacity-40"
-        >
-          <Download :size="17" />
+          >
+            <Download :size="17" />
 
-          Export
-        </button>
+            CSV
+          </button>
+          <button
+            @click="exportExcel"
+            :disabled="
+              filteredData.length === 0
+            "
+            class="flex h-10
+                   items-center
+                   justify-center gap-2
+                   rounded-xl border
+                   border-emerald-200
+                   px-4 text-sm
+                   font-medium
+                   text-emerald-700
+                   transition
+                   hover:bg-emerald-50
+                   disabled:cursor-not-allowed
+                   disabled:opacity-40"
+          >
+            <Download :size="17" />
+
+            Excel
+          </button>
+        </div>
 
       </div>
     </div>

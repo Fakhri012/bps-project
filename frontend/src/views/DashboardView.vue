@@ -133,7 +133,7 @@ function getInstitutionLabel(item) {
 |
 */
 
-const institutionData =
+const institutionSourceData =
   computed(() => {
     const data =
       backendSummary.value
@@ -178,16 +178,14 @@ const institutionData =
         )
       })
 
-      /*
-       * Pastikan nilai selalu Number.
-       */
-      .map(item => ({
-        ...item,
-
-        nilai:
-          Number(item.nilai)
-      }))
   })
+
+const institutionData = computed(() =>
+  institutionSourceData.value.map(item => ({
+        ...item,
+        nilai: Number(item.nilai)
+  }))
+)
 
 
 
@@ -1079,11 +1077,12 @@ function downloadDashboardCsv() {
   downloadCsvFile(
     filename,
     ['Kode Institusi', 'Institusi', 'Nilai'],
-    institutionData.value.map(item => [
+    institutionSourceData.value.map(item => [
       item.kode || '',
       getInstitutionLabel(item),
       item.nilai
-    ])
+    ]),
+    { numericColumns: [2] }
   )
 }
 

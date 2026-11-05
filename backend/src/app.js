@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const dashboardRoutes = require('./routes/dashboardRoutes')
 const analisisRasioRoutes = require('./routes/analisisRasioRoutes')
+const bandingMakroRoutes = require('./routes/bandingMakroRoutes')
 const getAllowedOrigins = require('./config/allowedOrigins')
 
 const app = express()
@@ -32,5 +33,8 @@ app.use('/api/dashboard', dashboardRoutes)
 
 // Route analisis rasio
 app.use('/api/analisis-rasio', analisisRasioRoutes)
+
+// Route banding makro
+app.use('/api/banding-makro', bandingMakroRoutes)
 
 module.exports = app

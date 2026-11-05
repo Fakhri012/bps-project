@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
+import { getDisplayNumberFormatOptions } from '../../utils/displayFormatters.js'
 
 const props = defineProps({
   years: {
@@ -47,9 +48,9 @@ const option = computed(() => {
           <strong>${item.axisValue}</strong><br/>
           Capaian: ${Number(
             item.value
-          ).toLocaleString('id-ID', {
+          )).toLocaleString('id-ID', getDisplayNumberFormatOptions({
             maximumFractionDigits: 1
-          })}%
+          }))}%
         `
       }
     },

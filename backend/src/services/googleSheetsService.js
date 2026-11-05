@@ -24,6 +24,9 @@ const TRIWULANAN_SHEET_2 =
 const ANALISIS_RASIO_SHEET =
   'Analisis Rasio'
 
+const BANDING_MAKRO_SHEET =
+  'Banding Makro'
+
 const PIVOT_HEADERS = [
   'SEKTOR',
   'TAHUN',
@@ -221,6 +224,26 @@ async function getAnalisisRasioData() {
   )
 }
 
+async function getBandingMakroRows() {
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID belum diatur')
+  }
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${BANDING_MAKRO_SHEET}'!B3:C`,
+    valueRenderOption: 'UNFORMATTED_VALUE'
+  })
+
+  return mapSheetRowsToObjects(
+    response.data.values || [],
+    ['TAHUN', 'TRANSAKSI'],
+    BANDING_MAKRO_SHEET
+  )
+}
+
 /*
 |--------------------------------------------------------------------------
 | EXPORT
@@ -231,5 +254,6 @@ module.exports = {
   getTahunanData,
   getTriwulananData,
   getDashboardData,
-  getAnalisisRasioData
+  getAnalisisRasioData,
+  getBandingMakroRows
 }
