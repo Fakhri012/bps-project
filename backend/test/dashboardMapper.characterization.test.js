@@ -74,6 +74,16 @@ test('normalizes mapped text and sector suffixes', () => {
   ])
 })
 
+test('preserves the original quarterly sector beside its normalized API field', () => {
+  const mapped = mapper.mapTriwulananRow(
+    createRow(' gg 2 ', '1', '2023/Q1')
+  )
+
+  assert.equal(mapped.sektor, 'GG')
+  assert.equal(mapped.sektorAsli, 'GG 2')
+  assert.equal(mapped.periode, '2023/Q1')
+})
+
 test('parses Indonesian and international numeric formats', () => {
   const cases = [
     ['1.234,56', 1234.56],

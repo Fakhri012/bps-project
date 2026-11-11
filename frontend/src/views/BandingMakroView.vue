@@ -2,13 +2,15 @@
 import {
   computed,
   onMounted,
-  ref
+  ref,
+  toRef
 } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import {
   GridComponent,
+  LegendComponent,
   MarkLineComponent,
   TooltipComponent
 } from 'echarts/components'
@@ -17,15 +19,31 @@ import {
   Activity,
   CalendarDays,
   ChevronDown,
-  CircleDollarSign
+  CircleDollarSign,
+  RotateCcw
 } from 'lucide-vue-next'
 
 import { getBandingMakroData } from '../services/bandingMakroApi'
+import { getTriwulananAsset } from '../services/dashboardApi'
+import MultiSelectFilter from '../components/dashboard/MultiSelectFilter.vue'
+import { usePersistentFilterState } from '../composables/filterState.js'
 import { formatDisplayNumber } from '../utils/displayFormatters.js'
+import { buildBandingMakroFilterOptions } from '../utils/bandingMakroFilters.js'
+import {
+  bandingMakroSectorOptions,
+  bandingMakroSectorRows
+} from '../data/bandingMakroSectorData.js'
+import {
+  BANDING_MAKRO_MAIN_SERIES,
+  buildBandingMakroChartData
+} from '../utils/bandingMakroChart.js'
+
+const sectorSeriesColors = ['#2563eb', '#d97706', '#e11d48', '#7c3aed', '#65a30d', '#0891b2']
 
 use([
   LineChart,
   GridComponent,
+  LegendComponent,
   MarkLineComponent,
   TooltipComponent,
   CanvasRenderer
@@ -34,10 +52,85 @@ use([
 const rows = ref([])
 const metadata = ref(null)
 const selectedYear = ref('')
+const selectedSectors = ref([])
 const selectedDetailYear = ref('')
 const quarterlyDetails = ref([])
 const loading = ref(false)
 const error = ref('')
+const pivotRows = ref([])
+const pivotFilterLoading = ref(false)
+const pivotFilterError = ref('')
+
+const { state: savedFilters } = usePersistentFilterState('bandingMakro', {
+  institutions: [],
+  periods: [],
+  macroTypes: []
+})
+
+const selectedInstitutions = toRef(savedFilters, 'institutions')
+const selectedPeriods = toRef(savedFilters, 'periods')
+const selectedMacroTypes = toRef(savedFilters, 'macroTypes')
+const filterResetVersion = ref(0)
+
+const bandingMakroFilters = computed(() =>
+  buildBandingMakroFilterOptions({
+    pivotRows: pivotRows.value,
+    bopRows: quarterlyDetails.value,
+    filters: {
+      institutions: selectedInstitutions.value,
+      periods: selectedPeriods.value,
+      macroTypes: selectedMacroTypes.value
+    }
+  })
+)
+
+const filterSourcesLoading = computed(() => loading.value || pivotFilterLoading.value)
+const hasSelectedFilter = computed(() =>
+  selectedInstitutions.value.length > 0 ||
+  selectedPeriods.value.length > 0 ||
+  selectedMacroTypes.value.length > 0
+)
+const showFilterEmptyState = computed(() =>
+  hasSelectedFilter.value && !bandingMakroFilters.value.hasMatchingData
+)
+
+function resetBandingMakroFilters() {
+  filterResetVersion.value += 1
+  selectedInstitutions.value = []
+  selectedPeriods.value = []
+  selectedMacroTypes.value = []
+}
+
+async function loadPivotFilterRows() {
+  pivotFilterLoading.value = true
+  pivotFilterError.value = ''
+
+  try {
+    const query = {
+      institusi: ['GG', 'HH', 'NPISHS', 'TOTAL EKN'],
+      page: 1,
+      limit: 100
+    }
+    const firstPage = await getTriwulananAsset(query)
+    const rows = Array.isArray(firstPage?.data) ? [...firstPage.data] : []
+    const totalPages = Number(firstPage?.pagination?.totalPages) || 1
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const response = await getTriwulananAsset({ ...query, page })
+      if (Array.isArray(response?.data)) {
+        rows.push(...response.data)
+      }
+    }
+
+    pivotRows.value = rows
+  } catch (requestError) {
+    console.error('Gagal memuat data Pivot untuk filter Banding Makro:', requestError)
+    pivotRows.value = []
+    pivotFilterError.value = 'Data Pivot untuk filter belum dapat dimuat.'
+  } finally {
+    pivotFilterLoading.value = false
+  }
+}
 
 const yearOptions = computed(() => rows.value.map(row => row.tahun))
 const detailYearOptions = computed(() => [
@@ -69,36 +162,81 @@ const filteredRows = computed(() =>
       : rows.value
 )
 
+const filteredSectorRows = computed(() => {
+  if (!selectedSectors.value.length) return []
+
+  const transactionYears = new Set(
+    filteredRows.value.map(row => String(row.tahun))
+  )
+  return bandingMakroSectorRows.filter(row =>
+    selectedSectors.value.includes(row.sektor) &&
+    (
+      selectedYear.value === '' ||
+      transactionYears.has(String(row.tahun))
+    )
+  )
+})
+
+const chartData = computed(() =>
+  buildBandingMakroChartData(
+    filteredRows.value,
+    filteredSectorRows.value,
+    selectedSectors.value
+  )
+)
+
 const featuredRow = computed(() => {
   return filteredRows.value.at(-1) || null
 })
 
 const chartOption = computed(() => ({
   animation: false,
+  legend: {
+    top: 0,
+    data: chartData.value.series.map(series => series.name),
+    selectedMode: false
+  },
   tooltip: {
     trigger: 'axis',
     formatter(params) {
-      const item = params?.[0]
-      if (!item) return ''
+      const year = String(params?.[0]?.axisValue ?? '')
+      if (!year) return ''
 
-      const row = filteredRows.value.find(value => String(value.tahun) === String(item.axisValue))
-      const value = row?.nilaiTriliunRupiah
-      return `<strong>${item.axisValue}</strong><br/>Transaksi berjalan: ${
-        value === null || value === undefined
-          ? 'Kurs tidak tersedia'
-          : `Rp ${formatDisplayNumber(value)} triliun`
-      }`
+      const mainValue = chartData.value.series[0]?.values[
+        chartData.value.years.indexOf(year)
+      ]
+      const sectorLines = selectedSectors.value.map((sector, index) => {
+        const value = chartData.value.series.find(series => series.name === sector)
+          ?.values[chartData.value.years.indexOf(year)]
+        const color = sectorSeriesColors[index % sectorSeriesColors.length]
+
+        return `<span style="color:${color}">●</span> ${sector}: ${
+          value === null || value === undefined
+            ? 'Data tidak tersedia'
+            : `Rp ${formatDisplayNumber(value)} triliun`
+        }`
+      })
+
+      return [
+        `<strong>${year}</strong>`,
+        `<span style="color:#0f766e">●</span> ${BANDING_MAKRO_MAIN_SERIES}: ${
+          mainValue === null || mainValue === undefined
+            ? 'Kurs tidak tersedia'
+            : `Rp ${formatDisplayNumber(mainValue)} triliun`
+        }`,
+        ...sectorLines
+      ].join('<br/>')
     }
   },
   grid: {
     left: 86,
     right: 28,
-    top: 28,
+    top: 52,
     bottom: 52
   },
   xAxis: {
     type: 'category',
-    data: filteredRows.value.map(row => String(row.tahun)),
+    data: chartData.value.years,
     axisTick: { show: false },
     axisLine: { lineStyle: { color: '#cbd5e1' } },
     axisLabel: { color: '#64748b', hideOverlap: true }
@@ -113,25 +251,44 @@ const chartOption = computed(() => ({
     },
     splitLine: { lineStyle: { color: '#e2e8f0' } }
   },
-  series: [{
-    name: 'Transaksi Berjalan',
-    type: 'line',
-    data: filteredRows.value.map(row => row.nilaiTriliunRupiah),
-    connectNulls: false,
-    smooth: false,
-    symbol: 'circle',
-    symbolSize: 7,
-    lineStyle: { width: 3, color: '#0f766e' },
-    itemStyle: { color: '#0f766e' },
-    markLine: {
-      silent: true,
-      symbol: 'none',
-      lineStyle: { color: '#94a3b8', type: 'dashed' },
-      label: { formatter: '0', color: '#64748b' },
-      data: [{ yAxis: 0 }]
+  series: chartData.value.series.map((series, index) => {
+    const isMainSeries = index === 0
+    const color = isMainSeries
+      ? '#0f766e'
+      : sectorSeriesColors[(index - 1) % sectorSeriesColors.length]
+
+    return {
+      name: series.name,
+      type: 'line',
+      data: series.values,
+      connectNulls: false,
+      smooth: false,
+      symbol: 'circle',
+      symbolSize: isMainSeries ? 8 : 7,
+      lineStyle: { width: isMainSeries ? 4 : 2.5, color },
+      itemStyle: isMainSeries
+        ? { color }
+        : { color: '#ffffff', borderColor: color, borderWidth: 2 },
+      ...(isMainSeries
+        ? {
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              lineStyle: { color: '#94a3b8', type: 'dashed' },
+              label: { formatter: '0', color: '#64748b' },
+              data: [{ yAxis: 0 }]
+            }
+          }
+        : {})
     }
-  }]
+  })
 }))
+
+function toggleSector(sector) {
+  selectedSectors.value = selectedSectors.value.includes(sector)
+    ? selectedSectors.value.filter(item => item !== sector)
+    : [...selectedSectors.value, sector]
+}
 
 function formatAmount(value, digits = 2) {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) {
@@ -172,7 +329,10 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  loadPivotFilterRows()
+})
 </script>
 
 <template>
@@ -207,6 +367,60 @@ onMounted(loadData)
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] sm:p-5" aria-label="Filter Banding Makro">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-sm font-semibold text-slate-900">Filter Banding Makro</h2>
+        <button
+          type="button"
+          class="relative z-[60] inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-teal-300 hover:text-teal-800"
+          @click="resetBandingMakroFilters"
+        >
+          <RotateCcw :size="14" />
+          Reset filter
+        </button>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <MultiSelectFilter
+          :key="`institutions-${filterResetVersion}`"
+          v-model="selectedInstitutions"
+          label="Institusi"
+          placeholder="Semua institusi tersedia"
+          :options="bandingMakroFilters.institutions"
+          :disabled="filterSourcesLoading"
+        />
+        <MultiSelectFilter
+          :key="`periods-${filterResetVersion}`"
+          v-model="selectedPeriods"
+          label="Periode"
+          placeholder="Semua periode tersedia"
+          :options="bandingMakroFilters.periods"
+          :disabled="filterSourcesLoading"
+        />
+        <MultiSelectFilter
+          :key="`macroTypes-${filterResetVersion}`"
+          v-model="selectedMacroTypes"
+          label="Jenis Makro"
+          placeholder="Semua jenis makro tersedia"
+          :options="bandingMakroFilters.macroTypes"
+          :disabled="filterSourcesLoading"
+        />
+      </div>
+
+      <p v-if="filterSourcesLoading" role="status" class="mt-3 text-xs text-slate-500">
+        Memuat pilihan filter dari sumber data...
+      </p>
+      <p v-else-if="pivotFilterError" role="alert" class="mt-3 text-xs text-amber-800">
+        {{ pivotFilterError }} Pilihan BOP tetap mengikuti data JISDOR yang tersedia.
+      </p>
+      <p v-if="selectedMacroTypes.includes('PDB')" class="mt-3 text-xs font-semibold text-amber-800">
+        PDB: Data Belum Tersedia.
+      </p>
+      <p v-if="showFilterEmptyState" role="status" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+        Tidak ada data untuk kombinasi filter yang dipilih.
+      </p>
     </section>
 
     <section class="grid gap-3 md:grid-cols-3" aria-label="Ringkasan indikator">
@@ -268,17 +482,46 @@ onMounted(loadData)
               Nilai negatif dan positif ditampilkan terhadap garis nol.
             </p>
           </div>
-          <label class="block text-xs font-semibold text-slate-600 sm:min-w-44">
-            Filter tahun
-            <select
-              v-model="selectedYear"
-              class="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-            >
-              <option value="">Semua tahun</option>
-              <option value="last-5">5 tahun terakhir</option>
-              <option value="last-10">10 tahun terakhir</option>
-            </select>
-          </label>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label class="block text-xs font-semibold text-slate-600 sm:min-w-44">
+              Filter tahun
+              <select
+                v-model="selectedYear"
+                class="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+              >
+                <option value="">Semua tahun</option>
+                <option value="last-5">5 tahun terakhir</option>
+                <option value="last-10">10 tahun terakhir</option>
+              </select>
+            </label>
+            <div class="relative block text-xs font-semibold text-slate-600 sm:min-w-52">
+              <span class="block">Bandingkan sektor</span>
+              <details class="group relative mt-1.5">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition hover:border-teal-400 focus:border-teal-500">
+                  <span>{{ selectedSectors.length ? `${selectedSectors.length} sektor dipilih` : 'Pilih sektor' }}</span>
+                  <ChevronDown :size="15" class="shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+                </summary>
+                <div class="absolute right-0 z-20 mt-1 max-h-72 w-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                  <p class="px-2 py-1 text-[11px] font-normal leading-4 text-slate-500">
+                    Nilai sektoral belum terhubung. Seri akan ditampilkan sebagai tidak tersedia sampai sumber dan satuan terverifikasi.
+                  </p>
+                  <label
+                    v-for="sector in bandingMakroSectorOptions"
+                    :key="sector.kode"
+                    class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="selectedSectors.includes(sector.kode)"
+                      class="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      @change="toggleSector(sector.kode)"
+                    >
+                    {{ sector.nama }}
+                  </label>
+                </div>
+              </details>
+            </div>
+          </div>
         </div>
 
         <div v-if="error" role="alert" class="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">

@@ -1408,6 +1408,11 @@ function mapTriwulananRow(row) {
     )
 
   return {
+    sektorAsli:
+      cleanText(
+        row['SEKTOR']
+      ).toUpperCase(),
+
     /*
      * Kode sektor.
      *
