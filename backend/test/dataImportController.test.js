@@ -147,7 +147,11 @@ async function createWorkbookFile(worksheetName, headers, rows, { formattedMaxRo
 async function previewWorkbook(dataset, year, quarter, headers, rows, options = {}) {
   const worksheetName = dataset === 'analisis_rasio'
     ? 'RASIO'
-    : dataset === 'tahunan' ? 'TAHUNAN' : 'TRIWULANAN'
+    : dataset === 'tahunan'
+      ? 'TAHUNAN'
+      : dataset === 'triwulanan_1'
+        ? 'TRIWULANAN_1'
+        : 'TRIWULANAN_2'
   const {
     worksheetOptions = {},
     sheetName = worksheetName,

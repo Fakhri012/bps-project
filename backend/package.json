@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "db:backup": "node scripts/databaseSetup.js backup",
+    "db:setup": "node scripts/databaseSetup.js setup"
   },
   "keywords": [],
   "author": "",

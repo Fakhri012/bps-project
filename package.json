@@ -5,7 +5,9 @@
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "test": "npm --prefix backend test",
-    "build": "npm --prefix frontend run build"
+    "build": "npm --prefix frontend run build",
+    "db:backup": "npm --prefix backend run db:backup --",
+    "db:setup": "npm --prefix backend run db:setup --"
   },
   "dependencies": {
     "cors": "^2.8.6",

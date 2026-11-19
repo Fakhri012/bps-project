@@ -19,3 +19,6 @@ coverage/
 
 # Logs
 *.log
+
+# PostgreSQL database backups
+backend/database/backups/
