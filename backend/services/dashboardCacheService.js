@@ -1,11 +1,11 @@
 const {
   getDashboardData
-} = require('./googleSheetsService')
+} = require('./postgresDataService')
 
 const {
   mapTahunanData,
   mapTriwulananData
-} = require('../mappers/dashboardMapper')
+} = require('../src/mappers/dashboardMapper')
 
 
 /*
@@ -41,6 +41,7 @@ let triwulananCache = {
 
 let dashboardLoadingPromise = null
 let manualRefreshPromise = null
+let dataChangeRefreshPromise = null
 let lastManualRefreshAt = null
 
 
@@ -95,6 +96,16 @@ async function loadDashboardCaches() {
 }
 
 async function getCachedTahunanData() {
+  if (dataChangeRefreshPromise) {
+    return dataChangeRefreshPromise.then(
+      () => tahunanCache.data,
+      error => {
+        if (tahunanCache.data) return tahunanCache.data
+        throw error
+      }
+    )
+  }
+
   if (manualRefreshPromise) {
     return manualRefreshPromise.then(
       () => tahunanCache.data,
@@ -117,6 +128,16 @@ async function getCachedTahunanData() {
 }
 
 async function getCachedTriwulananData() {
+  if (dataChangeRefreshPromise) {
+    return dataChangeRefreshPromise.then(
+      () => triwulananCache.data,
+      error => {
+        if (triwulananCache.data) return triwulananCache.data
+        throw error
+      }
+    )
+  }
+
   if (manualRefreshPromise) {
     return manualRefreshPromise.then(
       () => triwulananCache.data,
@@ -146,6 +167,10 @@ async function warmDashboardCache() {
 }
 
 async function refreshDashboardCache() {
+  if (dataChangeRefreshPromise) {
+    await dataChangeRefreshPromise
+  }
+
   if (manualRefreshPromise) {
     return manualRefreshPromise
   }
@@ -201,6 +226,41 @@ async function refreshDashboardCache() {
   })()
 
   return manualRefreshPromise
+}
+
+async function refreshDashboardCacheAfterDataChange() {
+  if (dataChangeRefreshPromise) {
+    return dataChangeRefreshPromise
+  }
+
+  dataChangeRefreshPromise = (async () => {
+    await Promise.allSettled([
+      dashboardLoadingPromise,
+      manualRefreshPromise
+    ].filter(Boolean))
+
+    const rawData = await getDashboardData()
+    const tahunanData = mapTahunanData(rawData.tahunan)
+    const triwulananData = mapTriwulananData(rawData.triwulanan)
+    const loadedAt = Date.now()
+
+    tahunanCache = { data: tahunanData, loadedAt }
+    triwulananCache = { data: triwulananData, loadedAt }
+
+    return {
+      refreshedAt: new Date(loadedAt).toISOString(),
+      total: {
+        tahunan: tahunanData.length,
+        triwulanan: triwulananData.length
+      }
+    }
+  })()
+
+  try {
+    return await dataChangeRefreshPromise
+  } finally {
+    dataChangeRefreshPromise = null
+  }
 }
 
 
@@ -323,6 +383,7 @@ module.exports = {
   getCachedTriwulananData,
   warmDashboardCache,
   refreshDashboardCache,
+  refreshDashboardCacheAfterDataChange,
 
   clearTahunanCache,
   clearTriwulananCache,

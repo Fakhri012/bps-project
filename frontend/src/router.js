@@ -9,6 +9,7 @@ import AssetView from './views/AssetView.vue'
 import TimeSeriesView from './views/TimeSeriesView.vue'
 import AnalisisRasioView from './views/AnalisisRasioView.vue'
 import BandingMakroView from './views/BandingMakroView.vue'
+import DataManagementView from './views/DataManagementView.vue'
 
 const routes = [
   {
@@ -46,6 +47,12 @@ const routes = [
     name: 'banding-makro',
     component: BandingMakroView,
     meta: { menu: 'Banding Makro' }
+  },
+  {
+    path: '/manajemen-data',
+    name: 'manajemen-data',
+    component: DataManagementView,
+    meta: { menu: 'Manajemen Data' }
   },
   {
     path: '/:pathMatch(.*)*',

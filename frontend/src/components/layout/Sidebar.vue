@@ -6,6 +6,7 @@ import {
   TableProperties,
   TrendingUp,
   ChartNoAxesCombined,
+  Database,
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
@@ -131,6 +132,14 @@ const menus = [
 
     icon:
       TableProperties
+  },
+
+  {
+    name:
+      'Manajemen Data',
+
+    icon:
+      Database
   }
 ]
 

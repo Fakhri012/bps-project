@@ -1,9 +1,8 @@
-const sheets =
-  require('../config/googleSheets')
+const sheets = require('../src/config/googleSheets');
 
 const {
-  mapSheetRowsToObjects
-} = require('../utils/sheetRows')
+    mapSheetRowsToObjects
+} = require('../src/utils/sheetRows');
 
 
 /*
@@ -244,6 +243,83 @@ async function getBandingMakroRows() {
   )
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| MIGRATION DATA - READ ONLY
+|--------------------------------------------------------------------------
+| Mengambil kelima sumber data secara terpisah.
+| Menggunakan UNFORMATTED_VALUE agar angka tidak menjadi
+| teks berformat sesuai locale Google Sheets.
+|--------------------------------------------------------------------------
+*/
+
+async function getMigrationSourceData() {
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    if (!spreadsheetId) {
+        throw new Error('GOOGLE_SHEET_ID belum diatur');
+    }
+
+    const response = await sheets.spreadsheets.values.batchGet({
+        spreadsheetId,
+        ranges: [
+            `'${TAHUNAN_SHEET}'!E:M`,
+            `'${TRIWULANAN_SHEET}'!E:M`,
+            `'${TRIWULANAN_SHEET_2}'!E:M`,
+            `'${ANALISIS_RASIO_SHEET}'!E:J`,
+            `'${BANDING_MAKRO_SHEET}'!B3:C`
+        ],
+        valueRenderOption: 'UNFORMATTED_VALUE'
+    });
+
+    const ranges = response.data.valueRanges || [];
+
+    const readRows = (index) => ranges[index]?.values || [];
+
+    return {
+        tahunan: mapSheetRowsToObjects(
+            readRows(0),
+            PIVOT_HEADERS,
+            TAHUNAN_SHEET
+        ),
+
+        triwulanan1: mapSheetRowsToObjects(
+            readRows(1),
+            PIVOT_HEADERS,
+            TRIWULANAN_SHEET
+        ),
+
+        triwulanan2: mapSheetRowsToObjects(
+            readRows(2),
+            PIVOT_HEADERS,
+            TRIWULANAN_SHEET_2
+        ),
+
+        analisisRasio: mapSheetRowsToObjects(
+            readRows(3),
+            [
+                'SEKTOR',
+                'TAHUN',
+                'JENIS RASIO',
+                'KODE',
+                'RINCIAN',
+                'NILAI'
+            ],
+            ANALISIS_RASIO_SHEET
+        ),
+
+        bandingMakro: mapSheetRowsToObjects(
+            readRows(4),
+            ['TAHUN', 'TRANSAKSI'],
+            BANDING_MAKRO_SHEET
+        )
+    };
+}
+
+
+
+
 /*
 |--------------------------------------------------------------------------
 | EXPORT
@@ -255,5 +331,6 @@ module.exports = {
   getTriwulananData,
   getDashboardData,
   getAnalisisRasioData,
-  getBandingMakroRows
+  getBandingMakroRows,
+  getMigrationSourceData
 }

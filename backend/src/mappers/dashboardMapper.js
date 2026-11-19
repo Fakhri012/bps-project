@@ -443,6 +443,68 @@ function parseNilai(value) {
     : null
 }
 
+function parseDatabaseNilai(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return null
+  }
+
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function getRowNilai(row) {
+  if (
+    Object.hasOwn(row, 'VALUE_STATUS') ||
+    Object.hasOwn(row, 'NILAI_NUMERIC')
+  ) {
+    return row.VALUE_STATUS === 'valid'
+      ? parseDatabaseNilai(row.NILAI_NUMERIC)
+      : null
+  }
+
+  return parseNilai(row['NILAI'])
+}
+
+function getRowValueStatus(row, numericValue) {
+  if (Object.hasOwn(row, 'VALUE_STATUS')) {
+    return String(row.VALUE_STATUS ?? 'unknown')
+  }
+
+  if (numericValue !== null) {
+    return 'valid'
+  }
+
+  const rawValue = row['NILAI']
+  return rawValue === null || rawValue === undefined || String(rawValue).trim() === ''
+    ? 'empty'
+    : 'non_numeric'
+}
+
+function setQualityStatuses(item, statuses) {
+  Object.defineProperty(item, 'qualityStatuses', {
+    value: [...new Set(statuses)],
+    configurable: true,
+    writable: true
+  })
+}
+
+function getFiniteValue(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && value.trim() === '')
+  ) {
+    return null
+  }
+
+  const number = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -476,7 +538,7 @@ const sektor =
     cleanText(row['SEKTOR'])
   )
 
-  return {
+  const mapped = {
     /*
      * Kode sektor asli Pivot.
      */
@@ -523,8 +585,11 @@ const sektor =
       ),
 
     nilai:
-      parseNilai(row['NILAI'])
+      getRowNilai(row)
   }
+
+  setQualityStatuses(mapped, [getRowValueStatus(row, mapped.nilai)])
+  return mapped
 }
 
 function normalizeNamaGabungan(value) {
@@ -1293,15 +1358,13 @@ function generateSummaryFromFilteredData(filteredData) {
 }
 
 function calculateTotalEknValue(data) {
-  if (data.length === 0) {
-    return null
-  }
+  const values = data
+    .map(item => getFiniteValue(item.nilai))
+    .filter(value => value !== null)
 
-  return data.reduce(
-    (total, item) =>
-      total + (Number(item.nilai) || 0),
-    0
-  )
+  return values.length > 0
+    ? values.reduce((total, value) => total + value, 0)
+    : null
 }
 
 function generateTahunanSummary(
@@ -1407,7 +1470,7 @@ function mapTriwulananRow(row) {
       row['TAHUN']
     )
 
-  return {
+  const mapped = {
     sektorAsli:
       cleanText(
         row['SEKTOR']
@@ -1500,10 +1563,11 @@ function mapTriwulananRow(row) {
      */
 
     nilai:
-      parseNilai(
-        row['NILAI']
-      )
+      getRowNilai(row)
   }
+
+  setQualityStatuses(mapped, [getRowValueStatus(row, mapped.nilai)])
+  return mapped
 }
 
 
@@ -1558,25 +1622,27 @@ function mergeBySektor(data) {
       neracaRincian:
         item.neracaRincian
     })
+    const value = getFiniteValue(item.nilai)
+    const qualityStatuses = item.qualityStatuses || [
+      value === null ? 'non_numeric' : 'valid'
+    ]
 
     if (!grouped.has(key)) {
-      grouped.set(
-        key,
-        {
-          ...item,
-          sektor,
-          institusi:
-            getInstitusiName(
-              sektor
-            ),
-          konsep:
-            item.konsep
-              ? [item.konsep]
-              : [],
-          nilai:
-            Number(item.nilai) || 0
-        }
-      )
+      const merged = {
+        ...item,
+        sektor,
+        institusi:
+          getInstitusiName(
+            sektor
+          ),
+        konsep:
+          item.konsep
+            ? [item.konsep]
+            : [],
+        nilai: value
+      }
+      setQualityStatuses(merged, qualityStatuses)
+      grouped.set(key, merged)
     } else {
       const existing =
         grouped.get(key)
@@ -1588,8 +1654,16 @@ function mergeBySektor(data) {
         ])
       }
 
-      existing.nilai +=
-        Number(item.nilai) || 0
+      const existingValue = getFiniteValue(existing.nilai)
+      existing.nilai = existingValue === null
+        ? value
+        : value === null
+          ? existingValue
+          : existingValue + value
+      setQualityStatuses(existing, [
+        ...existing.qualityStatuses,
+        ...qualityStatuses
+      ])
     }
   }
 

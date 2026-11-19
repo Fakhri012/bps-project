@@ -18,7 +18,8 @@ import {
 } from 'lucide-vue-next'
 
 import {
-  formatDisplayNumber
+  formatDisplayNumber,
+  formatNullableDecimal
 } from '../../utils/displayFormatters.js'
 
 
@@ -77,22 +78,7 @@ function toNumber(value) {
 
 
 function formatNilai(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ''
-  ) {
-    return '—'
-  }
-
-  const number =
-    Number(value)
-
-  if (!Number.isFinite(number)) {
-    return String(value)
-  }
-
-  return formatDisplayNumber(number)
+  return formatNullableDecimal(value)
 }
 
 

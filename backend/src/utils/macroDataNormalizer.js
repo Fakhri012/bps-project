@@ -48,6 +48,25 @@ function normalizeTransactionMillions(value) {
   return Number.isInteger(parsed) ? parsed : parsed * 1000
 }
 
+function getTransactionValue(row) {
+  if (
+    Object.hasOwn(row, 'VALUE_STATUS') ||
+    Object.hasOwn(row, 'TRANSAKSI_NUMERIC')
+  ) {
+    return row.VALUE_STATUS === 'valid'
+      ? row.TRANSAKSI_NUMERIC
+      : null
+  }
+
+  return row.Transaksi
+}
+
+function getRawTransactionValue(row) {
+  return Object.hasOwn(row, 'TRANSAKSI_RAW')
+    ? row.TRANSAKSI_RAW
+    : row.Transaksi
+}
+
 function extractAnnualTransactions(rows) {
   const records = new Map()
   const invalidRows = []
@@ -71,7 +90,9 @@ function extractAnnualTransactions(rows) {
       continue
     }
 
-    const transaction = normalizeTransactionMillions(row.Transaksi)
+    const transaction = normalizeTransactionMillions(
+      getTransactionValue(row)
+    )
 
     if (transaction === null) {
       invalidRows.push({ row: index + 1, tahun: year, reason: 'Transaksi kosong atau tidak valid' })
@@ -94,7 +115,7 @@ function extractAnnualTransactions(rows) {
 
     records.set(year, {
       tahun: year,
-      transaksiAsli: row.Transaksi,
+      transaksiAsli: getRawTransactionValue(row),
       transaksiJutaUSD: transaction,
       satuanTransaksi: 'Juta USD'
     })
@@ -147,7 +168,9 @@ function extractQuarterlyTransactions(rows) {
 
     const tahun = Number(match[1])
     const triwulan = Number(match[2])
-    const transaksiJutaUSD = normalizeTransactionMillions(row.Transaksi)
+    const transaksiJutaUSD = normalizeTransactionMillions(
+      getTransactionValue(row)
+    )
 
     if (transaksiJutaUSD === null) {
       invalidRows.push({ row: index + 1, periode: `${tahun}/Q${triwulan}`, reason: 'Transaksi kosong atau tidak valid' })
@@ -173,7 +196,7 @@ function extractQuarterlyTransactions(rows) {
       tahun,
       triwulan,
       periode,
-      transaksiAsli: row.Transaksi,
+      transaksiAsli: getRawTransactionValue(row),
       transaksiJutaUSD,
       satuanTransaksi: 'Juta USD'
     })

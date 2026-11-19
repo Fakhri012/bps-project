@@ -522,11 +522,9 @@ onBeforeUnmount(() => {
         type="button"
          :disabled="disabled"
         @click.stop="clearSelection"
-        class="text-[10px]
-               font-semibold
-               text-slate-400
-               transition
-           hover:text-red-500
+         class="inline-flex h-5 items-center rounded px-1
+           text-[8px] font-semibold leading-none text-slate-400
+           transition hover:bg-rose-50 hover:text-rose-600
            disabled:cursor-not-allowed
            disabled:opacity-50"
       >
@@ -836,12 +834,8 @@ onBeforeUnmount(() => {
                 item.value
               )
             "
-            class="mt-1 shrink-0
-                   rounded-md
-                   px-2
-                   py-1
-                   text-[10px]
-                   font-semibold
+                 class="mt-0.5 inline-flex h-5 shrink-0 items-center
+                   rounded px-1 text-[8px] font-semibold leading-none
                    text-blue-600
                    opacity-0
                    transition
@@ -884,21 +878,11 @@ onBeforeUnmount(() => {
           modelValue.length > 0 &&
           !singleSelect
         "
-        class="flex
-           shrink-0
-               items-center
-               justify-between
-               border-t
-               border-slate-100
-               bg-slate-50/70
-               px-3
-               py-2"
+        class="flex shrink-0 items-center justify-between border-t border-slate-100 bg-slate-50/70 px-2.5 py-1"
       >
 
         <span
-          class="text-[10px]
-                 font-medium
-                 text-slate-500"
+             class="text-[8px] font-medium text-slate-500"
         >
           {{ formatDisplayNumber(modelValue.length) }}
           dipilih
@@ -908,10 +892,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           @click.stop="clearSelection"
-          class="text-[10px]
-                 font-semibold
-                 text-red-500
-                 hover:text-red-600"
+             class="inline-flex min-h-5 items-center rounded px-1.5 text-[8px] font-semibold leading-none text-rose-600 transition hover:bg-rose-50 hover:text-rose-700"
         >
           Hapus Semua
         </button>

@@ -8,7 +8,7 @@ const {
   getTahunanCacheInfo,
   getTriwulananCacheInfo
 } = require(
-  '../services/dashboardCacheService'
+  '../../services/dashboardCacheService'
 )
 
 const {
@@ -30,6 +30,19 @@ const {
 const {
   sendInternalServerError
 } = require('../utils/httpErrors')
+
+function toNullableNumber(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && value.trim() === '')
+  ) {
+    return null
+  }
+
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
 
 
 async function getTriwulananSummary(
@@ -516,13 +529,13 @@ function buildTahunanTimeSeriesFromFilteredData(filteredData) {
         Number(item.tahun)
 
       const nilai =
-        Number(item.nilai)
+        toNullableNumber(item.nilai)
       const sektor =
         String(item.sektor ?? '').trim()
 
       if (
         !Number.isFinite(tahun) ||
-        !Number.isFinite(nilai) ||
+        nilai === null ||
         !sektor
       ) {
         return
@@ -730,7 +743,7 @@ function buildTriwulananTimeSeriesFromFilteredData(filteredData) {
         Number(item.triwulan)
 
       const nilai =
-        Number(item.nilai)
+        toNullableNumber(item.nilai)
       const sektor =
         String(item.sektor ?? '').trim()
 
@@ -739,7 +752,7 @@ function buildTriwulananTimeSeriesFromFilteredData(filteredData) {
         !Number.isInteger(triwulan) ||
         triwulan < 1 ||
         triwulan > 4 ||
-        !Number.isFinite(nilai) ||
+        nilai === null ||
         !sektor
       ) {
         return

@@ -1,12 +1,12 @@
 const fs = require('fs')
 
-const { getBandingMakroRows } = require('./googleSheetsService')
+const { getBandingMakroRows } = require('./postgresDataService')
 const {
   buildBandingMakroData,
   buildQuarterlyBandingMakroData,
   extractAnnualTransactions,
   extractQuarterlyTransactions
-} = require('../utils/macroDataNormalizer')
+} = require('../src/utils/macroDataNormalizer')
 const {
   JISDOR_FILE_PATH,
   readJisdorData,
@@ -54,8 +54,8 @@ async function loadBandingMakroData() {
     detailTriwulanan,
     summary: {
       transaksi: {
-        spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        sheet: 'Banding Makro',
+        spreadsheetId: null,
+        sheet: null,
         kolom: {
           tahun: 'TAHUN',
           transaksi: 'Transaksi'

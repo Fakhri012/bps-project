@@ -82,6 +82,29 @@ test('annual line chart returns one separate series for one selected sector', ()
   )
 })
 
+test('time series omit missing values instead of converting them to zero', () => {
+  assert.deepEqual(
+    buildTahunanTimeSeries([
+      { ...annualRows[0], nilai: null }
+    ], { institusi: 'FC' }),
+    []
+  )
+
+  assert.deepEqual(
+    buildTriwulananTimeSeries([
+      {
+        tahun: 2020,
+        triwulan: 1,
+        sektor: 'FC',
+        institusi: 'Korporasi Finansial',
+        rincian: 'A',
+        nilai: null
+      }
+    ], { institusi: 'FC' }),
+    []
+  )
+})
+
 test('annual line chart separates each selected sector by period', () => {
   const result =
     buildTahunanTimeSeries(

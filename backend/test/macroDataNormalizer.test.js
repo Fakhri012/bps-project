@@ -48,6 +48,48 @@ test('reads annual values only, removes identical duplicates, and rejects confli
   ]), /nilai transaksi berbeda/)
 })
 
+test('uses PostgreSQL numeric transactions only when their quality status is valid', () => {
+  const annual = extractAnnualTransactions([
+    {
+      TAHUN: '2024',
+      Transaksi: '#DIV/0!',
+      TRANSAKSI_NUMERIC: '-8.583',
+      TRANSAKSI_RAW: '-8.583',
+      VALUE_STATUS: 'valid'
+    },
+    {
+      TAHUN: '2025',
+      Transaksi: '17',
+      TRANSAKSI_NUMERIC: '17',
+      TRANSAKSI_RAW: '#DIV/0!',
+      VALUE_STATUS: 'source_error'
+    }
+  ])
+
+  assert.deepEqual(annual.records.map(record => ({
+    tahun: record.tahun,
+    transaksiJutaUSD: record.transaksiJutaUSD,
+    transaksiAsli: record.transaksiAsli
+  })), [
+    { tahun: 2024, transaksiJutaUSD: -8583, transaksiAsli: '-8.583' }
+  ])
+  assert.deepEqual(annual.invalidRows, [
+    { row: 2, tahun: 2025, reason: 'Transaksi kosong atau tidak valid' }
+  ])
+
+  const quarterly = extractQuarterlyTransactions([
+    {
+      TAHUN: '2024/Q1',
+      Transaksi: 'invalid display value',
+      TRANSAKSI_NUMERIC: '-2.889',
+      TRANSAKSI_RAW: '-2.889',
+      VALUE_STATUS: 'valid'
+    }
+  ])
+
+  assert.equal(quarterly.records[0].transaksiJutaUSD, -2889)
+})
+
 test('extracts quarterly transactions without deriving them from annual values', () => {
   const result = extractQuarterlyTransactions([
     { TAHUN: '2024/Q1', Transaksi: -68 },

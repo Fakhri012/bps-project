@@ -51,7 +51,8 @@ import {
 } from '../composables/filterState.js'
 
 import {
-  formatDisplayNumber
+  formatDisplayNumber,
+  formatNullableDecimal
 } from '../utils/displayFormatters.js'
 
 import {
@@ -290,19 +291,7 @@ function getSectorName(sektor) {
 */
 
 function rawValue(value) {
-
-  if (
-    value === null ||
-    value === undefined ||
-    value === ''
-  ) {
-
-    return '-'
-
-  }
-
-  return String(value)
-
+  return formatNullableDecimal(value)
 }
 
 

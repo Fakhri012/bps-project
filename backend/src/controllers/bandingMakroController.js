@@ -1,4 +1,4 @@
-const { getBandingMakroData } = require('../services/bandingMakroService')
+const { getBandingMakroData } = require('../../services/bandingMakroService')
 const { sendInternalServerError } = require('../utils/httpErrors')
 
 async function getBandingMakro(req, res) {

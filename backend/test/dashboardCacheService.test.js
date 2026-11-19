@@ -2,21 +2,21 @@ const Module = require('node:module')
 const test = require('node:test')
 const assert = require('node:assert/strict')
 
-const servicePath = require.resolve('../src/services/dashboardCacheService')
-const sheetsPath = require.resolve('../src/services/googleSheetsService')
+const servicePath = require.resolve('../services/dashboardCacheService')
+const postgresPath = require.resolve('../services/postgresDataService')
 const mapperPath = require.resolve('../src/mappers/dashboardMapper')
 
 async function withMockedCache(readers, callback) {
   const previousDateNow = Date.now
   const previousService = require.cache[servicePath]
-  const previousSheets = require.cache[sheetsPath]
+  const previousPostgres = require.cache[postgresPath]
   const previousMapper = require.cache[mapperPath]
   const calls = { dashboardReads: 0 }
 
-  const sheetsModule = new Module(sheetsPath)
-  sheetsModule.filename = sheetsPath
-  sheetsModule.loaded = true
-  sheetsModule.exports = {
+  const postgresModule = new Module(postgresPath)
+  postgresModule.filename = postgresPath
+  postgresModule.loaded = true
+  postgresModule.exports = {
     getTahunanData: readers.getTahunanData,
     getTriwulananData: readers.getTriwulananData,
     getDashboardData: async () => {
@@ -42,7 +42,7 @@ async function withMockedCache(readers, callback) {
     mapTriwulananData: data => data.map(item => ({ ...item }))
   }
 
-  require.cache[sheetsPath] = sheetsModule
+  require.cache[postgresPath] = postgresModule
   require.cache[mapperPath] = mapperModule
   delete require.cache[servicePath]
 
@@ -57,10 +57,10 @@ async function withMockedCache(readers, callback) {
       delete require.cache[servicePath]
     }
 
-    if (previousSheets) {
-      require.cache[sheetsPath] = previousSheets
+    if (previousPostgres) {
+      require.cache[postgresPath] = previousPostgres
     } else {
-      delete require.cache[sheetsPath]
+      delete require.cache[postgresPath]
     }
 
     if (previousMapper) {
@@ -152,7 +152,7 @@ test('manual refresh replaces valid cache and advances its timestamp within the 
   })
 })
 
-test('concurrent manual refresh requests share one Google Sheets read', async () => {
+test('concurrent manual refresh requests share one PostgreSQL read', async () => {
   let now = 1_800_000_000_000
   let annualReads = 0
   let quarterlyReads = 0
@@ -220,6 +220,30 @@ test('manual refresh enforces a 60-second minimum interval', async () => {
   })
 })
 
+test('data-change refresh bypasses the manual throttle and updates both caches atomically', async () => {
+  let now = 1_800_000_000_000
+  let version = 1
+
+  await withMockedCache({
+    getDashboardData: async () => ({
+      tahunan: [{ version }],
+      triwulanan: [{ version, quarter: 1 }]
+    })
+  }, async service => {
+    Date.now = () => now
+    await service.refreshDashboardCache()
+
+    version = 2
+    now += 1_000
+    const refreshed = await service.refreshDashboardCacheAfterDataChange()
+
+    assert.deepEqual(await service.getCachedTahunanData(), [{ version: 2 }])
+    assert.deepEqual(await service.getCachedTriwulananData(), [{ version: 2, quarter: 1 }])
+    assert.equal(refreshed.refreshedAt, new Date(now).toISOString())
+    assert.deepEqual(refreshed.total, { tahunan: 1, triwulanan: 1 })
+  })
+})
+
 test('failed manual refresh preserves the existing annual and quarterly caches', async () => {
   let now = 1_800_000_000_000
   let failQuarterly = false
@@ -229,7 +253,7 @@ test('failed manual refresh preserves the existing annual and quarterly caches',
     getTahunanData: async () => [{ version }],
     getTriwulananData: async () => {
       if (failQuarterly) {
-        throw new Error('Google Sheets unavailable')
+        throw new Error('PostgreSQL unavailable')
       }
 
       return [{ version }]
@@ -243,7 +267,7 @@ test('failed manual refresh preserves the existing annual and quarterly caches',
 
     version = 2
     failQuarterly = true
-    await assert.rejects(service.refreshDashboardCache(), /Google Sheets unavailable/)
+    await assert.rejects(service.refreshDashboardCache(), /PostgreSQL unavailable/)
 
     assert.deepEqual(await service.getCachedTahunanData(), [{ version: 1 }])
     assert.deepEqual(await service.getCachedTriwulananData(), [{ version: 1 }])

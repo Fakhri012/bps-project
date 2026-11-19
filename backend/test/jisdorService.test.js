@@ -8,7 +8,7 @@ const {
   parseJisdorRate,
   readJisdorData,
   summarizeJisdor
-} = require('../src/services/jisdorService')
+} = require('../services/jisdorService')
 
 test('parses workbook date and Indonesian rate formats', () => {
   assert.equal(parseJisdorDate('5/20/2013 12:00:00 AM'), '2013-05-20')

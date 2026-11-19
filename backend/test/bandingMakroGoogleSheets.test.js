@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 
 test('reads Banding Makro rows through the existing Google Sheets client', async () => {
   const configPath = require.resolve('../src/config/googleSheets')
-  const servicePath = require.resolve('../src/services/googleSheetsService')
+  const servicePath = require.resolve('../services/googleSheetsService')
   const previousConfig = require.cache[configPath]
   const previousService = require.cache[servicePath]
   const previousSheetId = process.env.GOOGLE_SHEET_ID

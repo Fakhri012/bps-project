@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   formatDisplayNumber,
+  formatNullableDecimal,
   setExportNumberFormat
 } from '../src/utils/displayFormatters.js'
 
@@ -34,4 +35,21 @@ test('disables grouping only while formatting numbers for PDF export', () => {
   }
 
   assert.equal(formatDisplayNumber(1234.5), '1.234,5')
+})
+
+test('formats nullable decimals without losing precision or turning NULL into zero', () => {
+  const cases = [
+    [null, '-'],
+    ['', '-'],
+    ['0', '0'],
+    ['150000', '150.000'],
+    ['0.0210', '0,0210'],
+    ['-150.25', '-150,25'],
+    ['1.234,56', '1.234,56'],
+    ['184,39306605199400', '184,39306605199400']
+  ]
+
+  for (const [value, expected] of cases) {
+    assert.equal(formatNullableDecimal(value), expected)
+  }
 })

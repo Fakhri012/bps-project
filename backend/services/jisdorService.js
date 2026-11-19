@@ -4,7 +4,6 @@ const XLSX = require('@e965/xlsx')
 const JISDOR_FILE_PATH = path.resolve(
   __dirname,
   '..',
-  '..',
   'data',
   'raw',
   'tabel_kurs.xlsx'

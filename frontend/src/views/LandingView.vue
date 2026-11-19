@@ -27,36 +27,13 @@ import {
   formatDisplayNumber
 } from '../utils/displayFormatters.js'
 
-const OVERVIEW_CACHE_KEY = 'bps-dashboard-landing-overview.annual-comparison.v4'
-
-function readCachedOverview() {
-  try {
-    const cached = JSON.parse(
-      localStorage.getItem(OVERVIEW_CACHE_KEY) || 'null'
-    )
-
-    return cached &&
-      typeof cached === 'object' &&
-      cached.latestPeriod?.frequency === 'tahunan' &&
-      Number.isInteger(Number(cached.latestPeriod.year)) &&
-      Array.isArray(cached.nationalIndicators?.values)
-      ? cached
-      : null
-  } catch {
-    return null
-  }
-}
-
-const cachedOverview = readCachedOverview()
-
 const emit = defineEmits([
   'select-menu'
 ])
 
-const loading = ref(!cachedOverview)
+const loading = ref(true)
 const error = ref('')
-const refreshWarning = ref('')
-const overviewResponse = ref(cachedOverview)
+const overviewResponse = ref(null)
 const dashboardOpening = ref(false)
 
 const macroDefinitions = [
@@ -249,30 +226,17 @@ const hasOverviewData = computed(() =>
 )
 
 async function loadOverview() {
-  loading.value = !overviewResponse.value
+  loading.value = true
   error.value = ''
-  refreshWarning.value = ''
 
   try {
     const response = await getLandingOverview()
     overviewResponse.value = response
-
-    try {
-      localStorage.setItem(
-        OVERVIEW_CACHE_KEY,
-        JSON.stringify(response)
-      )
-    } catch {}
   } catch (requestError) {
     console.error('Gagal memuat landing statistik:', requestError)
-
-    if (overviewResponse.value) {
-      refreshWarning.value =
-        'Pembaruan gagal. Data terakhir yang tersimpan tetap ditampilkan.'
-    } else {
-      error.value = requestError?.response?.data?.message ||
-        'Ringkasan statistik belum dapat dimuat. Silakan coba lagi.'
-    }
+    overviewResponse.value = null
+    error.value = requestError?.response?.data?.message ||
+      'Ringkasan statistik belum dapat dimuat. Silakan coba lagi.'
   } finally {
     loading.value = false
   }
@@ -368,7 +332,6 @@ onBeforeUnmount(() => {
             </div>
             <div class="text-right">
               <span v-if="unitLabel" class="text-[10px] text-blue-200 sm:text-xs">Satuan: {{ unitLabel }}</span>
-              <p v-if="refreshWarning" class="mt-1 text-[9px] text-amber-200 sm:text-[10px]" role="status">{{ refreshWarning }}</p>
             </div>
           </div>
 

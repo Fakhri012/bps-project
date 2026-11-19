@@ -3,7 +3,7 @@ require('dotenv').config()
 const app = require('./app')
 const {
   warmDashboardCache
-} = require('./services/dashboardCacheService')
+} = require('../services/dashboardCacheService')
 
 const PORT = process.env.PORT || 3001
 

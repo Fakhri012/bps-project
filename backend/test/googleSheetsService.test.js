@@ -3,7 +3,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 
 const configPath = require.resolve('../src/config/googleSheets')
-const servicePath = require.resolve('../src/services/googleSheetsService')
+const servicePath = require.resolve('../services/googleSheetsService')
 
 async function withMockedGoogleSheets(valuesByRange, callback) {
   const previousConfig = require.cache[configPath]

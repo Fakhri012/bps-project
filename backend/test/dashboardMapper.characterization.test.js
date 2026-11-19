@@ -125,8 +125,8 @@ test('merges annual sector suffixes and preserves annual summary output', () => 
       ['NFC PRIVATE', 'K1', 999],
       ['NFC PUBLIC', 'K1', 888],
       ['GG', 'K1', -10],
-      ['FC', 'K2', 0],
-      ['FC', 'K3', 0]
+      ['FC', 'K2', null],
+      ['FC', 'K3', null]
     ]
   )
 
@@ -196,7 +196,7 @@ test('merges quarterly sector suffixes and reports no total without a TOTAL EKN 
       ['NFC', '2023/Q1', 1, 'K1', 2000],
       ['NFC PRIVATE', '2023/Q1', 1, 'K1', 50],
       ['GG', '2023/Q1', 1, 'K1', -2],
-      ['FC', '2023/Q1', 1, 'K2', 0]
+      ['FC', '2023/Q1', 1, 'K2', null]
     ]
   )
 
@@ -634,4 +634,46 @@ test('summary keeps each sector and classification as a separate ranking entry',
     { kode: 'NFC', nama: 'Korporasi Nonfinansial', klasifikasi: 'Klasifikasi A', nilai: 8 },
     { kode: 'NFC', nama: 'Korporasi Nonfinansial', klasifikasi: 'Klasifikasi B', nilai: 7 }
   ])
+})
+
+test('preserves PostgreSQL value quality through sector merges without exposing it in JSON', () => {
+  const mapped = mapper.mapTahunanData([
+    {
+      ...createRow('FC', '10'),
+      NILAI_NUMERIC: '10.000000000000000000',
+      NILAI_RAW: '10',
+      VALUE_STATUS: 'valid'
+    },
+    {
+      ...createRow('FC 2', '#DIV/0!'),
+      NILAI_NUMERIC: null,
+      NILAI_RAW: '#DIV/0!',
+      VALUE_STATUS: 'source_error'
+    }
+  ])
+
+  assert.equal(mapped[0].nilai, 10)
+  assert.deepEqual(mapped[0].qualityStatuses, ['valid', 'source_error'])
+  assert.equal(JSON.stringify(mapped[0]).includes('qualityStatuses'), false)
+
+  const invalidOnly = mapper.mapTahunanData([
+    {
+      ...createRow('TOTAL EKN', ''),
+      NILAI_NUMERIC: null,
+      NILAI_RAW: '',
+      VALUE_STATUS: 'empty'
+    },
+    {
+      ...createRow('TOTAL EKN 2', '#DIV/0!', '2023', 'K1'),
+      NILAI_NUMERIC: null,
+      NILAI_RAW: '#DIV/0!',
+      VALUE_STATUS: 'source_error'
+    }
+  ])
+
+  assert.equal(invalidOnly[0].nilai, null)
+  assert.equal(
+    mapper.generateTahunanSummary(invalidOnly, {}).totalNilai,
+    null
+  )
 })

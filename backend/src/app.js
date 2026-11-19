@@ -1,40 +1,48 @@
-const express = require('express')
-const cors = require('cors')
-const dashboardRoutes = require('./routes/dashboardRoutes')
-const analisisRasioRoutes = require('./routes/analisisRasioRoutes')
-const bandingMakroRoutes = require('./routes/bandingMakroRoutes')
-const getAllowedOrigins = require('./config/allowedOrigins')
 
-const app = express()
-app.disable('x-powered-by')
+const express = require('express');
+const cors = require('cors');
 
-const allowedOrigins = getAllowedOrigins()
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const analisisRasioRoutes = require('./routes/analisisRasioRoutes');
+const bandingMakroRoutes = require('./routes/bandingMakroRoutes');
+const dataImportRoutes = require('./routes/dataImportRoutes');
 
-app.use(cors({ origin: allowedOrigins }))
+const getAllowedOrigins = require('./config/allowedOrigins');
+
+const app = express();
+
+app.disable('x-powered-by');
+
+const allowedOrigins = getAllowedOrigins();
+
+app.use(cors({ origin: allowedOrigins }));
 
 app.use('/api', (req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store')
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  next()
-})
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+});
 
-app.use(express.json())
+app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'BPS Dashboard API is running',
-    timestamp: new Date().toISOString()
-  })
-})
+    res.json({
+        success: true,
+        message: 'BPS Dashboard API is running',
+        timestamp: new Date().toISOString()
+    });
+});
 
-// Route dashboard
-app.use('/api/dashboard', dashboardRoutes)
+// Route dashboard.
+app.use('/api/dashboard', dashboardRoutes);
 
-// Route analisis rasio
-app.use('/api/analisis-rasio', analisisRasioRoutes)
+// Route analisis rasio.
+app.use('/api/analisis-rasio', analisisRasioRoutes);
 
-// Route banding makro
-app.use('/api/banding-makro', bandingMakroRoutes)
+// Route banding makro.
+app.use('/api/banding-makro', bandingMakroRoutes);
 
-module.exports = app
+// Route data import.
+app.use('/api/data-import', dataImportRoutes);
+
+module.exports = app;

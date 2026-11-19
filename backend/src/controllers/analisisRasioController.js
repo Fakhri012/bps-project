@@ -1,6 +1,7 @@
+
 const {
   getAnalisisRasioData
-} = require('../services/googleSheetsService')
+} = require('../../services/postgresDataService')
 
 const {
   sendInternalServerError
